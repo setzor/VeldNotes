@@ -1,11 +1,16 @@
 import { Editor, Extension } from "@tiptap/core";
+import type { JSONContent } from "@tiptap/core";
 import { StarterKit } from "@tiptap/starter-kit";
 import { Image } from "@tiptap/extension-image";
 import { Placeholder } from "@tiptap/extension-placeholder";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { mediaPath } from "./api";
 import { installImagePaste } from "./paste";
-import { markdownToTiptapContent, tiptapDocToMarkdown } from "./markdown";
+import {
+  reviveSavedContent,
+  tiptapContentFromMarkdown,
+  tiptapDocToMarkdown,
+} from "./markdown";
 
 const LocalMediaImage = Image.extend({
   addAttributes() {
@@ -75,6 +80,16 @@ export interface EditorCallbacks {
   onUpdate: (markdown: string) => void;
 }
 
+/**
+ * TipTap treats string content as HTML, so both markdown and any legacy
+ * raw-JSON entry must be converted to a parsed doc object before mounting.
+ */
+function resolveEditorContent(raw: string): JSONContent | "" {
+  const revived = reviveSavedContent(raw);
+  if (typeof revived !== "string") return revived;
+  return tiptapContentFromMarkdown(revived) ?? "";
+}
+
 export function createEditor(
   element: HTMLElement,
   content: string,
@@ -97,7 +112,7 @@ export function createEditor(
         },
       }),
     ],
-    content: markdownToTiptapContent(content),
+    content: resolveEditorContent(content),
     autofocus: true,
     editorProps: {
       attributes: {

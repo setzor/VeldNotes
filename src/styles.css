@@ -128,7 +128,7 @@
     --cover-ink: #f4ead0;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.3);
   }
-  :root[data-theme="forest"] {
+  :root:not([data-mode="light"])[data-theme="forest"] {
     --paper: #1d241b;
     --paper-deep: #161c14;
     --ink: #dde8d6;
@@ -144,7 +144,7 @@
     --cover-ink: #e4f0da;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.3);
   }
-  :root[data-theme="meadow"] {
+  :root:not([data-mode="light"])[data-theme="meadow"] {
     --paper: #1a2129;
     --paper-deep: #131920;
     --ink: #d8e2ec;
@@ -160,7 +160,7 @@
     --cover-ink: #ddeaf4;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.3);
   }
-  :root[data-theme="dusk"] {
+  :root:not([data-mode="light"])[data-theme="dusk"] {
     --paper: #241d28;
     --paper-deep: #1b151e;
     --ink: #e6dced;
@@ -176,7 +176,7 @@
     --cover-ink: #eee4f4;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.3);
   }
-  :root[data-theme="rose"] {
+  :root:not([data-mode="light"])[data-theme="rose"] {
     --paper: #271d1c;
     --paper-deep: #1e1514;
     --ink: #ecdcd8;
@@ -192,7 +192,7 @@
     --cover-ink: #f6e4e0;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.3);
   }
-  :root[data-theme="midnight"] {
+  :root:not([data-mode="light"])[data-theme="midnight"] {
     --paper: #171522;
     --paper-deep: #100e18;
     --ink: #d9d4e8;
@@ -402,6 +402,22 @@ button {
   margin-top: 2px;
 }
 
+#cover-brand {
+  font-family: var(--serif);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+#cover-sub {
+  font-family: var(--sans);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.75;
+  margin-top: 2px;
+}
+
 .cover-rule {
   height: 1px;
   background: rgba(255, 255, 255, 0.35);
@@ -412,6 +428,31 @@ button {
   font-family: var(--sans);
   font-size: 12px;
   opacity: 0.85;
+}
+
+#cover-brand,
+#cover-sub {
+  outline: none;
+  border-radius: 4px;
+  padding: 1px 3px;
+  margin-left: -3px;
+  transition: background 120ms ease, box-shadow 120ms ease;
+}
+
+#cover-brand:hover,
+#cover-sub:hover,
+#cover-brand:focus,
+#cover-sub:focus {
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+
+#cover-brand:empty::before,
+#cover-sub:empty::before {
+  content: "Click to edit";
+  opacity: 0.55;
+  font-style: italic;
+  font-size: 0.85em;
 }
 
 /* calendar */

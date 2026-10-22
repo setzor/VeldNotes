@@ -16,9 +16,12 @@ import {
 } from "./dates";
 import {
   applyTheme,
+  loadCoverSubtitle,
+  loadCoverTitle,
   loadMode,
   loadThemeId,
   Mode,
+  saveCoverText,
   saveTheme,
   THEMES,
   ThemeId,
@@ -39,6 +42,8 @@ const calTitleEl = document.querySelector<HTMLButtonElement>("#cal-title")!;
 const calPrevEl = document.querySelector<HTMLButtonElement>("#cal-prev")!;
 const calNextEl = document.querySelector<HTMLButtonElement>("#cal-next")!;
 const coverStatsEl = document.querySelector<HTMLDivElement>("#cover-stats")!;
+const coverBrandEl = document.querySelector<HTMLDivElement>("#cover-brand")!;
+const coverSubEl = document.querySelector<HTMLDivElement>("#cover-sub")!;
 const entryDateEl = document.querySelector<HTMLSpanElement>("#entry-date")!;
 const saveStateEl = document.querySelector<HTMLSpanElement>("#save-state")!;
 const editorHostEl = document.querySelector<HTMLDivElement>("#editor-host")!;
@@ -187,6 +192,24 @@ watchSystemMode(() => {
   if (currentMode === "auto") applyTheme(currentThemeId, currentMode);
 });
 
+/* --- customizable cover text ----------------------------------------------- */
+
+function initCoverText(): void {
+  coverBrandEl.textContent = loadCoverTitle();
+  coverSubEl.textContent = loadCoverSubtitle();
+  for (const el of [coverBrandEl, coverSubEl]) {
+    el.addEventListener("input", () =>
+      saveCoverText(coverBrandEl.textContent ?? "", coverSubEl.textContent ?? ""),
+    );
+    el.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        (event.target as HTMLElement).blur();
+      }
+    });
+  }
+}
+
 /* --- suppress the webview's devtools context menu --------------------------- */
 
 document.addEventListener(
@@ -236,17 +259,16 @@ window.addEventListener("keydown", (event) => {
 
 async function boot(): Promise<void> {
   todayStr = await todayDate();
-  currentDate = todayStr;
-  viewedMonth = monthKey(todayStr);
   await refreshEntries();
   renderWeekdays();
-  setViewedMonth(viewedMonth);
+  setViewedMonth(monthKey(todayStr));
   await openDate(todayStr);
 }
 
 window.addEventListener("DOMContentLoaded", () => {
   applyTheme(currentThemeId, currentMode);
   renderThemePopover();
+  initCoverText();
   void boot();
 });
 

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { markdownToHtml, markdownToTiptapContent, tiptapDocToMarkdown } from "./markdown";
+import {
+  markdownToHtml,
+  reviveSavedContent,
+  tiptapContentFromMarkdown,
+  tiptapDocToMarkdown,
+} from "./markdown";
 
 describe("markdownToHtml", () => {
   it("renders headings, bold, italic, lists, quotes, code", () => {
@@ -33,10 +38,9 @@ describe("markdownToHtml", () => {
 describe("markdown round-trip", () => {
   it("parses markdown into a doc and serializes back", () => {
     const md = "# Hello\n\nSome **bold** text and a list:\n\n- a\n- b\n";
-    const content = markdownToTiptapContent(md);
-    expect(content).not.toBe(md);
-    const doc = JSON.parse(content);
-    expect(doc.type).toBe("doc");
+    const doc = tiptapContentFromMarkdown(md);
+    expect(doc).not.toBeNull();
+    expect(doc?.type).toBe("doc");
     const out = tiptapDocToMarkdown(doc);
     expect(out).toContain("# Hello");
     expect(out).toContain("**bold**");
@@ -46,22 +50,37 @@ describe("markdown round-trip", () => {
 
   it("round-trips an image node as a relative media reference", () => {
     const md = "![pasted image](../media/deadbeef.png)\n";
-    const doc = JSON.parse(markdownToTiptapContent(md));
+    const doc = tiptapContentFromMarkdown(md);
     const out = tiptapDocToMarkdown(doc);
     expect(out).toContain("![pasted image](../media/deadbeef.png)");
   });
 
   it("round-trips blockquotes and code blocks", () => {
     const md = "> wise words\n\n```\nlet x = 1;\n```\n";
-    const doc = JSON.parse(markdownToTiptapContent(md));
+    const doc = tiptapContentFromMarkdown(md);
     const out = tiptapDocToMarkdown(doc);
     expect(out).toContain("> wise words");
     expect(out).toContain("```");
     expect(out).toContain("let x = 1;");
   });
 
-  it("empty markdown yields empty doc and empty output", () => {
-    expect(markdownToTiptapContent("")).toBe("");
+  it("empty markdown yields null content", () => {
+    expect(tiptapContentFromMarkdown("")).toBeNull();
     expect(tiptapDocToMarkdown({ type: "doc", content: [{ type: "paragraph" }] })).toBe("\n");
+  });
+});
+
+describe("reviveSavedContent", () => {
+  it("parses legacy raw-JSON entries", () => {
+    const corrupted =
+      '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"hi"}]}]}';
+    const revived = reviveSavedContent(corrupted);
+    expect(typeof revived).toBe("object");
+    expect((revived as { type: string }).type).toBe("doc");
+  });
+
+  it("leaves markdown untouched", () => {
+    const md = "# Hello\n\nWorld\n";
+    expect(reviveSavedContent(md)).toBe(md);
   });
 });
