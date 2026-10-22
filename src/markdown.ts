@@ -5,6 +5,7 @@ import { getSchema } from "@tiptap/core";
 import { StarterKit } from "@tiptap/starter-kit";
 import { Image } from "@tiptap/extension-image";
 import { MarkdownParser, MarkdownSerializer, MarkdownSerializerState } from "prosemirror-markdown";
+import type { JSONContent } from "@tiptap/core";
 import type { Node as PMNode, Schema } from "@tiptap/pm/model";
 import type { Mark } from "@tiptap/pm/model";
 import type { ParseSpec } from "prosemirror-markdown";
@@ -80,11 +81,33 @@ const tokens: { [name: string]: ParseSpec } = {
 
 const parser = new MarkdownParser(schema(), tokenizer, tokens);
 
-export function markdownToTiptapContent(markdown: string): string {
-  if (!markdown.trim()) return "";
+export function tiptapContentFromMarkdown(
+  markdown: string,
+): JSONContent | null {
+  if (!markdown.trim()) return null;
   const doc = parser.parse(markdown);
-  if (!doc) return markdown;
-  return JSON.stringify(doc.toJSON());
+  if (!doc) return null;
+  return doc.toJSON() as unknown as JSONContent;
+}
+
+/**
+ * Legacy support: entries saved by older builds could contain a raw TipTap
+ * JSON document string instead of Markdown. Detect that and return the parsed
+ * object so the editor renders it instead of showing literal JSON text.
+ */
+export function reviveSavedContent(raw: string): JSONContent | string {
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("{") && trimmed.includes('"type":"doc"')) {
+    try {
+      const parsed = JSON.parse(trimmed) as { type?: string };
+      if (parsed && parsed.type === "doc") {
+        return parsed as unknown as JSONContent;
+      }
+    } catch {
+      // fall through: treat as markdown
+    }
+  }
+  return raw;
 }
 
 type NodeSerializer = (
