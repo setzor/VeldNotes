@@ -1,0 +1,305 @@
+:root {
+  --paper: #f6f1e7;
+  --paper-deep: #efe7d8;
+  --ink: #3d3629;
+  --ink-soft: #6f6653;
+  --ink-faint: #9a8f78;
+  --gold: #a8862d;
+  --gold-soft: #c9a94e;
+  --line: #ddd2bd;
+  --card: #fbf8f1;
+  --accent-bg: #ece2c8;
+  --shadow: 0 1px 2px rgba(61, 54, 41, 0.08), 0 4px 14px rgba(61, 54, 41, 0.06);
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --sans: "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #23201a;
+    --paper-deep: #1c1915;
+    --ink: #e6ddc9;
+    --ink-soft: #b3a88e;
+    --ink-faint: #7d7462;
+    --gold: #d4b45c;
+    --gold-soft: #e0c878;
+    --line: #3a352a;
+    --card: #2a261f;
+    --accent-bg: #353026;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.3);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(ellipse at 20% 0%, rgba(168, 134, 45, 0.05), transparent 55%),
+    radial-gradient(ellipse at 85% 100%, rgba(168, 134, 45, 0.04), transparent 50%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+#sidebar {
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper-deep);
+  padding: 10px 16px 8px;
+}
+
+#date-strip {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding-bottom: 4px;
+}
+
+.date-cell {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 52px;
+  padding: 6px 8px 7px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--sans);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.date-cell:hover {
+  background: var(--accent-bg);
+  color: var(--ink);
+}
+
+.date-cell .date-mon {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.date-cell .date-day {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.date-cell.has-entry .date-day::after {
+  content: "";
+  display: block;
+  width: 4px;
+  height: 4px;
+  margin: 3px auto 0;
+  border-radius: 50%;
+  background: var(--gold);
+}
+
+.date-cell.today {
+  border-color: var(--gold-soft);
+  color: var(--ink);
+}
+
+.date-cell.active {
+  background: var(--card);
+  border-color: var(--line);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+}
+
+.date-cell.active .date-mon {
+  color: var(--gold);
+}
+
+#page {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 24px 80px;
+}
+
+#page-header {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+#entry-date {
+  font-family: var(--sans);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+#save-state {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--ink-faint);
+  min-height: 1em;
+}
+
+#save-state[data-status="saving"] {
+  color: var(--gold);
+}
+
+#save-state[data-status="error"] {
+  color: #b0483a;
+}
+
+#editor-host {
+  width: 100%;
+  max-width: 720px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 32px 40px 48px;
+  min-height: 60vh;
+}
+
+.entry-editor {
+  outline: none;
+  min-height: 50vh;
+}
+
+.entry-editor p {
+  margin: 0 0 0.9em;
+}
+
+.entry-editor h1,
+.entry-editor h2,
+.entry-editor h3 {
+  font-family: var(--sans);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink);
+  margin: 1.2em 0 0.5em;
+}
+
+.entry-editor h1 {
+  font-size: 1.55em;
+}
+
+.entry-editor h2 {
+  font-size: 1.25em;
+}
+
+.entry-editor h3 {
+  font-size: 1.05em;
+  letter-spacing: 0.02em;
+}
+
+.entry-editor strong {
+  color: var(--ink);
+}
+
+.entry-editor em {
+  color: var(--ink-soft);
+}
+
+.entry-editor blockquote {
+  margin: 0 0 0.9em;
+  padding: 2px 0 2px 16px;
+  border-left: 3px solid var(--gold-soft);
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+.entry-editor ul,
+.entry-editor ol {
+  margin: 0 0 0.9em;
+  padding-left: 1.4em;
+}
+
+.entry-editor li::marker {
+  color: var(--gold);
+}
+
+.entry-editor code {
+  font-family: "Cascadia Mono", "SF Mono", Consolas, monospace;
+  font-size: 0.88em;
+  background: var(--accent-bg);
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+
+.entry-editor pre {
+  background: var(--paper-deep);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  margin: 0 0 0.9em;
+}
+
+.entry-editor pre code {
+  background: none;
+  padding: 0;
+}
+
+.entry-editor hr {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 1.4em 0;
+}
+
+.entry-editor a {
+  color: var(--gold);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.entry-image {
+  margin: 1em 0;
+  text-align: center;
+}
+
+.entry-image img {
+  max-width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.entry-editor .ProseMirror-selectednode img {
+  outline: 2px solid var(--gold-soft);
+  outline-offset: 2px;
+}
+
+.entry-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--ink-faint);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  font-style: italic;
+}
