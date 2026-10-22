@@ -11,11 +11,46 @@
   <body>
     <div id="app">
       <aside id="sidebar">
-        <div id="date-strip"></div>
+        <div id="cover">
+          <div class="cover-spine"></div>
+          <div class="cover-body">
+            <div class="cover-brand">VeldNotes</div>
+            <div class="cover-sub">a cozy daily journal</div>
+            <div class="cover-rule"></div>
+            <div id="cover-stats"></div>
+          </div>
+        </div>
+
+        <nav id="calendar">
+          <header id="cal-header">
+            <button id="cal-prev" class="icon-btn" type="button" title="Previous month" aria-label="Previous month">&#8249;</button>
+            <button id="cal-title" type="button" title="Jump to today"></button>
+            <button id="cal-next" class="icon-btn" type="button" title="Next month" aria-label="Next month">&#8250;</button>
+          </header>
+          <div id="cal-weekdays"></div>
+          <div id="cal-grid"></div>
+        </nav>
+
+        <footer id="sidebar-footer">
+          <button id="theme-btn" type="button" title="Themes">Palette</button>
+        </footer>
       </aside>
+
+      <div id="theme-popover" hidden>
+        <div id="theme-choices"></div>
+        <div id="mode-choices">
+          <button data-mode="auto" type="button">Auto</button>
+          <button data-mode="light" type="button">Light</button>
+          <button data-mode="dark" type="button">Dark</button>
+        </div>
+      </div>
+
       <main id="page">
         <header id="page-header">
-          <span id="entry-date"></span>
+          <button id="prev-day" class="icon-btn" type="button" title="Previous day" aria-label="Previous day">&#8249;</button>
+          <div id="entry-date"></div>
+          <button id="next-day" class="icon-btn" type="button" title="Next day" aria-label="Next day">&#8250;</button>
+          <button id="today-btn" type="button">Today</button>
           <span id="save-state"></span>
         </header>
         <div id="editor-host"></div>
