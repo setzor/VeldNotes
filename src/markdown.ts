@@ -1,11 +1,20 @@
 import { marked } from "marked";
 import MarkdownIt from "markdown-it";
 import type Token from "markdown-it/lib/token.mjs";
+import TokenCtor from "markdown-it/lib/token.mjs";
 import { getSchema } from "@tiptap/core";
+import type { JSONContent } from "@tiptap/core";
 import { StarterKit } from "@tiptap/starter-kit";
 import { Image } from "@tiptap/extension-image";
-import { MarkdownParser, MarkdownSerializer, MarkdownSerializerState } from "prosemirror-markdown";
-import type { JSONContent } from "@tiptap/core";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableCell } from "@tiptap/extension-table-cell";
+import { TableHeader } from "@tiptap/extension-table-header";
+import {
+  MarkdownParser,
+  MarkdownSerializer,
+  MarkdownSerializerState,
+} from "prosemirror-markdown";
 import type { Node as PMNode, Schema } from "@tiptap/pm/model";
 import type { Mark } from "@tiptap/pm/model";
 import type { ParseSpec } from "prosemirror-markdown";
@@ -15,6 +24,10 @@ marked.setOptions({ gfm: true, breaks: false });
 const extensions = [
   StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
   Image.configure({ inline: true }),
+  Table.configure({ resizable: true }),
+  TableRow,
+  TableCell,
+  TableHeader,
 ];
 
 function schema(): Schema {
@@ -36,7 +49,33 @@ function listIsTight(tokens: Token[], i: number): boolean {
   return false;
 }
 
-const tokenizer = MarkdownIt("commonmark", { html: false });
+const tokenizer = MarkdownIt({ html: false });
+
+/**
+ * Table cells contain bare `inline` tokens, but TipTap's table cell nodes
+ * require block content. Wrap each cell's inline token in synthetic
+ * paragraph_open/paragraph_close tokens so the parser produces paragraphs.
+ */
+function wrapCellParagraphs(raw: Token[]): Token[] {
+  const out: Token[] = [];
+  for (let i = 0; i < raw.length; i++) {
+    const tok = raw[i];
+    if ((tok.type === "th_open" || tok.type === "td_open") && raw[i + 1]?.type === "inline") {
+      const inline = raw[i + 1];
+      const open = new TokenCtor("paragraph_open", "p", 1);
+      const close = new TokenCtor("paragraph_close", "p", -1);
+      out.push(tok, open, inline, close);
+      i += 1;
+    } else {
+      out.push(tok);
+    }
+  }
+  return out;
+}
+
+const baseTokenize = tokenizer.parse.bind(tokenizer);
+tokenizer.parse = (src: string, env: Record<string, unknown>) =>
+  wrapCellParagraphs(baseTokenize(src, env));
 
 const tokens: { [name: string]: ParseSpec } = {
   blockquote: { block: "blockquote" },
@@ -73,11 +112,52 @@ const tokens: { [name: string]: ParseSpec } = {
     }),
   },
   hardbreak: { node: "hardBreak" },
+  table: { block: "table" },
+  thead: { ignore: true },
+  tbody: { ignore: true },
+  tr: { block: "tableRow" },
+  th: { block: "tableHeader" },
+  td: { block: "tableCell" },
   em: { mark: "italic" },
   strong: { mark: "bold" },
   s: { mark: "strike" },
   code_inline: { mark: "code", noCloseToken: true },
 };
+
+/* --- table serialization ---------------------------------------------- */
+
+function tableWidth(node: PMNode): number {
+  if (!node.firstChild) return 1;
+  return node.firstChild.childCount;
+}
+
+function cellToMarkdown(cell: PMNode): string {
+  const cellSerializer = new MarkdownSerializer(nodes, marks);
+  return cellSerializer
+    .serialize(cell, { tightLists: true })
+    .replace(/\n/g, " ")
+    .trim();
+}
+
+function serializeTable(state: MarkdownSerializerState, node: PMNode): void {
+  const width = tableWidth(node);
+  const lines: string[] = [];
+  let sawHeader = false;
+  node.forEach((row) => {
+    const cells: string[] = [];
+    row.forEach((cell) => {
+      cells.push(cellToMarkdown(cell).replace(/\|/g, "\\|"));
+    });
+    while (cells.length < width) cells.push("");
+    lines.push("| " + cells.join(" | ") + " |");
+    if (!sawHeader) {
+      lines.push("|" + " --- |".repeat(width));
+      sawHeader = true;
+    }
+  });
+  state.write(lines.join("\n"));
+  state.closeBlock(node);
+}
 
 const parser = new MarkdownParser(schema(), tokenizer, tokens);
 
@@ -150,6 +230,10 @@ const nodes: Record<string, NodeSerializer> = {
   horizontalRule(_state, _node, parent) {
     return parent.type.name === "doc" ? "---\n" : "\n---\n";
   },
+  table: serializeTable,
+  tableRow() {},
+  tableHeader() {},
+  tableCell() {},
   image(state, node) {
     const src = (node.attrs.src as string).replace(/[()]/g, "\\$&");
     const alt = state.esc((node.attrs.alt as string) || "");

@@ -1,5 +1,13 @@
 import { Editor } from "@tiptap/core";
 import { saveMedia } from "./api";
+import { setActiveNotebook } from "./editor";
+
+let currentNotebook = "default";
+
+export function setPasteNotebook(notebook: string): void {
+  currentNotebook = notebook;
+  setActiveNotebook(notebook);
+}
 
 const EXT_BY_MIME: Record<string, string> = {
   "image/png": "png",
@@ -53,7 +61,7 @@ async function insertImageFile(
     const buffer = await file.arrayBuffer();
     const bytes = new Uint8Array(buffer);
     const ext = EXT_BY_MIME[file.type] ?? null;
-    const { markdown } = await saveMedia(bytes, ext);
+    const { markdown } = await saveMedia(currentNotebook, bytes, ext);
     const at = pos ?? editor.state.selection.from;
     editor
       .chain()

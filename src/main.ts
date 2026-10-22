@@ -1,6 +1,14 @@
 import "./styles.css";
 import { Editor } from "@tiptap/core";
-import { getEntry, listEntries, saveEntry, todayDate } from "./api";
+import {
+  createNotebook,
+  getEntry,
+  listEntries,
+  listNotebooks,
+  saveEntry,
+  todayDate,
+  type NotebookMeta,
+} from "./api";
 import { Autosave, SaveStatus } from "./autosave";
 import { createEditor } from "./editor";
 import {
@@ -16,21 +24,29 @@ import {
 } from "./dates";
 import {
   applyTheme,
-  loadCoverSubtitle,
-  loadCoverTitle,
   loadMode,
   loadThemeId,
   Mode,
-  saveCoverText,
   saveTheme,
   THEMES,
   ThemeId,
   watchSystemMode,
 } from "./theme";
+import {
+  coverColors,
+  fetchNotebooks,
+  loadLastNotebook,
+  renderCoverChoices,
+  renderShelf,
+  saveLastNotebook,
+} from "./shelf";
+import { createToolbar, setToolbarNotebook } from "./toolbar";
 
 let currentDate = "";
 let todayStr = "";
 let viewedMonth = "";
+let activeNotebookId = "default";
+let notebooks: NotebookMeta[] = [];
 let editor: Editor | null = null;
 let autosave: Autosave | null = null;
 let datesWithEntries = new Set<string>();
@@ -41,9 +57,9 @@ const calWeekdaysEl = document.querySelector<HTMLDivElement>("#cal-weekdays")!;
 const calTitleEl = document.querySelector<HTMLButtonElement>("#cal-title")!;
 const calPrevEl = document.querySelector<HTMLButtonElement>("#cal-prev")!;
 const calNextEl = document.querySelector<HTMLButtonElement>("#cal-next")!;
-const coverStatsEl = document.querySelector<HTMLDivElement>("#cover-stats")!;
+const coverEl = document.querySelector<HTMLDivElement>("#cover")!;
 const coverBrandEl = document.querySelector<HTMLDivElement>("#cover-brand")!;
-const coverSubEl = document.querySelector<HTMLDivElement>("#cover-sub")!;
+const coverStatsEl = document.querySelector<HTMLDivElement>("#cover-stats")!;
 const entryDateEl = document.querySelector<HTMLSpanElement>("#entry-date")!;
 const saveStateEl = document.querySelector<HTMLSpanElement>("#save-state")!;
 const editorHostEl = document.querySelector<HTMLDivElement>("#editor-host")!;
@@ -54,6 +70,12 @@ const themeBtnEl = document.querySelector<HTMLButtonElement>("#theme-btn")!;
 const themePopEl = document.querySelector<HTMLDivElement>("#theme-popover")!;
 const themeChoicesEl = document.querySelector<HTMLDivElement>("#theme-choices")!;
 const modeChoicesEl = document.querySelector<HTMLDivElement>("#mode-choices")!;
+const toolbarEl = document.querySelector<HTMLDivElement>("#toolbar")!;
+const shelfPopEl = document.querySelector<HTMLDivElement>("#shelf-popover")!;
+const shelfGridEl = document.querySelector<HTMLDivElement>("#shelf-grid")!;
+const shelfFormEl = document.querySelector<HTMLFormElement>("#shelf-form")!;
+const shelfNameEl = document.querySelector<HTMLInputElement>("#shelf-name")!;
+const shelfCoversEl = document.querySelector<HTMLDivElement>("#shelf-covers")!;
 
 function setSaveStatus(status: SaveStatus): void {
   const labels: Record<SaveStatus, string> = {
@@ -66,16 +88,25 @@ function setSaveStatus(status: SaveStatus): void {
   saveStateEl.dataset.status = status;
 }
 
-async function refreshEntries(): Promise<void> {
-  const metas = await listEntries();
-  datesWithEntries = new Set(metas.map((m) => m.date));
-  renderCoverStats();
+function activeNotebook(): NotebookMeta | undefined {
+  return notebooks.find((n) => n.id === activeNotebookId);
 }
 
-function renderCoverStats(): void {
+function renderCover(): void {
+  const nb = activeNotebook();
+  const [a, b] = coverColors(nb?.cover ?? "kraft");
+  coverEl.style.setProperty("--cover-a", a);
+  coverEl.style.setProperty("--cover-b", b);
+  coverBrandEl.textContent = nb?.name ?? "My Journal";
   const count = datesWithEntries.size;
   coverStatsEl.textContent =
     count === 1 ? "1 entry written" : `${count} entries written`;
+}
+
+async function refreshEntries(): Promise<void> {
+  const metas = await listEntries(activeNotebookId);
+  datesWithEntries = new Set(metas.map((m) => m.date));
+  renderCover();
 }
 
 function renderWeekdays(): void {
@@ -114,7 +145,7 @@ function setViewedMonth(month: string): void {
 async function openDate(date: string): Promise<void> {
   if (!isValidDateString(date) || date === currentDate) return;
   await autosave?.flushNow();
-  const payload = await getEntry(date);
+  const payload = await getEntry(activeNotebookId, date);
   currentDate = payload.date;
   entryDateEl.textContent = formatLong(payload.date);
   editor?.destroy();
@@ -122,7 +153,7 @@ async function openDate(date: string): Promise<void> {
     onUpdate: (markdown) => autosave?.update(markdown),
   });
   autosave = new Autosave(
-    (content) => saveEntry(currentDate, content),
+    (content) => saveEntry(activeNotebookId, currentDate, content),
     setSaveStatus,
   );
   autosave.markLoaded(payload.content);
@@ -135,6 +166,63 @@ async function openDate(date: string): Promise<void> {
   }
   editor?.commands.focus("end");
 }
+
+/* --- notebook shelf --------------------------------------------------------- */
+
+let newNotebookCover = "kraft";
+
+function renderShelfPopover(): void {
+  renderShelf(shelfGridEl, notebooks, activeNotebookId, {
+    onSwitch: (id) => {
+      void switchNotebook(id);
+      shelfPopEl.hidden = true;
+    },
+  });
+}
+
+async function switchNotebook(id: string): Promise<void> {
+  if (id === activeNotebookId) return;
+  await autosave?.flushNow();
+  activeNotebookId = id;
+  saveLastNotebook(id);
+  setToolbarNotebook(id);
+  currentDate = "";
+  await refreshEntries();
+  renderCover();
+  setViewedMonth(monthKey(todayStr));
+  await openDate(todayStr);
+}
+
+coverEl.addEventListener("click", () => {
+  renderShelfPopover();
+  shelfPopEl.hidden = !shelfPopEl.hidden;
+});
+
+document.addEventListener("click", (event) => {
+  for (const pop of [themePopEl, shelfPopEl]) {
+    if (pop.hidden) continue;
+    const target = event.target as HTMLElement;
+    if (pop.contains(target)) continue;
+    if (pop === themePopEl && themeBtnEl.contains(target)) continue;
+    if (pop === shelfPopEl && coverEl.contains(target)) continue;
+    pop.hidden = true;
+  }
+});
+
+shelfFormEl.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const name = shelfNameEl.value.trim();
+  if (!name) return;
+  void createNotebook(name, newNotebookCover).then(async (meta) => {
+    notebooks = await fetchNotebooks();
+    shelfNameEl.value = "";
+    renderShelfPopover();
+    await switchNotebook(meta.id);
+    shelfPopEl.hidden = true;
+  });
+});
+
+newNotebookCover = renderCoverChoices(shelfCoversEl);
 
 /* --- theme popover --------------------------------------------------------- */
 
@@ -181,34 +269,9 @@ themeBtnEl.addEventListener("click", () => {
   themePopEl.hidden = !themePopEl.hidden;
 });
 
-document.addEventListener("click", (event) => {
-  if (themePopEl.hidden) return;
-  const target = event.target as HTMLElement;
-  if (themePopEl.contains(target) || themeBtnEl.contains(target)) return;
-  themePopEl.hidden = true;
-});
-
 watchSystemMode(() => {
   if (currentMode === "auto") applyTheme(currentThemeId, currentMode);
 });
-
-/* --- customizable cover text ----------------------------------------------- */
-
-function initCoverText(): void {
-  coverBrandEl.textContent = loadCoverTitle();
-  coverSubEl.textContent = loadCoverSubtitle();
-  for (const el of [coverBrandEl, coverSubEl]) {
-    el.addEventListener("input", () =>
-      saveCoverText(coverBrandEl.textContent ?? "", coverSubEl.textContent ?? ""),
-    );
-    el.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        (event.target as HTMLElement).blur();
-      }
-    });
-  }
-}
 
 /* --- suppress the webview's devtools context menu --------------------------- */
 
@@ -216,9 +279,7 @@ document.addEventListener(
   "contextmenu",
   (event) => {
     const target = event.target as HTMLElement;
-    if (
-      target.closest("input, textarea, [contenteditable], .entry-editor")
-    ) {
+    if (target.closest("input, textarea, [contenteditable], .entry-editor")) {
       return;
     }
     event.preventDefault();
@@ -259,7 +320,12 @@ window.addEventListener("keydown", (event) => {
 
 async function boot(): Promise<void> {
   todayStr = await todayDate();
+  notebooks = await listNotebooks();
+  const last = loadLastNotebook();
+  activeNotebookId = notebooks.some((n) => n.id === last) ? last : notebooks[0].id;
+  setToolbarNotebook(activeNotebookId);
   await refreshEntries();
+  renderCover();
   renderWeekdays();
   setViewedMonth(monthKey(todayStr));
   await openDate(todayStr);
@@ -268,7 +334,7 @@ async function boot(): Promise<void> {
 window.addEventListener("DOMContentLoaded", () => {
   applyTheme(currentThemeId, currentMode);
   renderThemePopover();
-  initCoverText();
+  createToolbar(toolbarEl, () => editor);
   void boot();
 });
 

@@ -11,11 +11,11 @@
   <body>
     <div id="app">
       <aside id="sidebar">
-        <div id="cover">
+        <div id="cover" title="Switch notebook">
           <div class="cover-spine"></div>
           <div class="cover-body">
-            <div id="cover-brand" contenteditable="true" spellcheck="false">My Journal</div>
-            <div id="cover-sub" contenteditable="true" spellcheck="false">a cozy daily journal</div>
+            <div id="cover-brand">My Journal</div>
+            <div id="cover-sub">a cozy daily journal</div>
             <div class="cover-rule"></div>
             <div id="cover-stats"></div>
           </div>
@@ -45,7 +45,17 @@
         </div>
       </div>
 
+      <div id="shelf-popover" hidden>
+        <div id="shelf-grid"></div>
+        <form id="shelf-form">
+          <input id="shelf-name" type="text" placeholder="New notebook name" maxlength="48" />
+          <div id="shelf-covers"></div>
+          <button type="submit">Add notebook</button>
+        </form>
+      </div>
+
       <main id="page">
+        <div id="toolbar"></div>
         <header id="page-header">
           <button id="prev-day" class="icon-btn" type="button" title="Previous day" aria-label="Previous day">&#8249;</button>
           <div id="entry-date"></div>

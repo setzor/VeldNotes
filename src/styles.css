@@ -771,6 +771,260 @@ button {
   min-height: 60vh;
 }
 
+/* --- formatting toolbar ---------------------------------------------------- */
+
+#toolbar {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 6px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  position: sticky;
+  top: 8px;
+  z-index: 10;
+}
+
+.tool-btn {
+  min-width: 30px;
+  height: 28px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.tool-btn:hover {
+  background: var(--accent-bg);
+  color: var(--ink);
+}
+
+.tool-btn.active {
+  background: var(--accent-bg);
+  border-color: var(--accent-soft);
+  color: var(--ink);
+}
+
+/* --- notebook shelf popover ------------------------------------------------ */
+
+#shelf-popover {
+  position: absolute;
+  z-index: 60;
+  top: 12px;
+  left: calc(var(--sidebar-w) - 10px);
+  width: 292px;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 12px;
+}
+
+#shelf-popover[hidden] {
+  display: none;
+}
+
+#shelf-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.shelf-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+}
+
+.shelf-item:hover {
+  background: var(--accent-bg);
+}
+
+.shelf-item.active {
+  border-color: var(--accent-soft);
+  box-shadow: var(--shadow);
+}
+
+.shelf-cover {
+  position: relative;
+  width: 84px;
+  height: 58px;
+  border-radius: 5px 8px 8px 5px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.shelf-cover-spine {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.shelf-name {
+  font-family: var(--sans);
+  font-size: 11.5px;
+  color: var(--ink);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shelf-rename {
+  font-family: var(--sans);
+  font-size: 11.5px;
+  width: 100%;
+  border: 1px solid var(--accent-soft);
+  border-radius: 5px;
+  background: var(--card);
+  color: var(--ink);
+  padding: 2px 4px;
+}
+
+.shelf-cover-pick {
+  display: none;
+  flex-wrap: wrap;
+  gap: 3px;
+  justify-content: center;
+}
+
+.shelf-item:hover .shelf-cover-pick {
+  display: flex;
+}
+
+.cover-dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  padding: 0;
+}
+
+.cover-dot.active {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 1px;
+}
+
+#shelf-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+#shelf-name {
+  font-family: var(--sans);
+  font-size: 13px;
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+#shelf-name:focus {
+  outline: none;
+  border-color: var(--accent-soft);
+}
+
+#shelf-covers {
+  display: flex;
+  gap: 5px;
+}
+
+#shelf-covers .cover-dot {
+  width: 18px;
+  height: 18px;
+}
+
+#shelf-form button[type="submit"] {
+  font-family: var(--sans);
+  font-size: 12px;
+  padding: 6px 0;
+  border: 1px solid var(--accent-soft);
+  border-radius: 8px;
+  background: var(--accent-bg);
+  color: var(--ink);
+}
+
+#shelf-form button[type="submit"]:hover {
+  background: var(--accent-bg);
+  filter: brightness(1.05);
+}
+
+/* --- editor tables --------------------------------------------------------- */
+
+.entry-editor table {
+  border-collapse: collapse;
+  margin: 0 0 0.9em;
+  width: 100%;
+  table-layout: fixed;
+  overflow: hidden;
+}
+
+.entry-editor td,
+.entry-editor th {
+  border: 1px solid var(--line);
+  padding: 6px 10px;
+  vertical-align: top;
+  position: relative;
+  min-width: 2em;
+}
+
+.entry-editor th {
+  background: var(--accent-bg);
+  font-family: var(--sans);
+  font-size: 0.9em;
+  text-align: left;
+}
+
+.entry-editor .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  pointer-events: none;
+}
+
+.entry-editor .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--accent-soft);
+}
+
+.entry-editor.resize-cursor {
+  cursor: col-resize;
+}
+
 .entry-editor {
   outline: none;
   min-height: 50vh;

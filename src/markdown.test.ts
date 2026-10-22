@@ -84,3 +84,24 @@ describe("reviveSavedContent", () => {
     expect(reviveSavedContent(md)).toBe(md);
   });
 });
+
+describe("markdown tables", () => {
+  it("round-trips a GFM table", () => {
+    const md = "| a | b |\n| --- | --- |\n| 1 | 2 |\n";
+    const doc = tiptapContentFromMarkdown(md);
+    expect(doc).not.toBeNull();
+    expect(JSON.stringify(doc)).toContain("tableHeader");
+    const out = tiptapDocToMarkdown(doc);
+    expect(out).toContain("| a | b |");
+    expect(out).toContain("| --- | --- |");
+    expect(out).toContain("| 1 | 2 |");
+  });
+
+  it("round-trips a table with bold cell text", () => {
+    const md = "| a | b |\n| --- | --- |\n| **x** | y |\n";
+    const doc = tiptapContentFromMarkdown(md);
+    const out = tiptapDocToMarkdown(doc);
+    expect(out).toContain("**x**");
+    expect(out).toContain("| y |");
+  });
+});

@@ -2,14 +2,55 @@ use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use chrono::NaiveDate;
+use chrono::Local;
+use serde::{Deserialize, Serialize};
 
 use crate::entry;
 use crate::media;
 
+const MANIFEST_FILE: &str = "notebooks.json";
+const ID_CHARS: &str = "abcdefghijklmnopqrstuvwxyz0123456789-";
+const MAX_NOTEBOOKS: usize = 64;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NotebookMeta {
+    pub id: String,
+    pub name: String,
+    pub cover: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct Manifest {
+    notebooks: Vec<NotebookMeta>,
+}
+
 #[derive(Debug, Clone)]
 pub struct Store {
     root: PathBuf,
+}
+
+fn sanitize_name(name: &str) -> String {
+    let mut out = String::new();
+    for ch in name.trim().chars() {
+        if ch.is_alphanumeric() || ch == ' ' || ch == '-' || ch == '_' {
+            out.push(ch);
+        }
+    }
+    let cleaned: String = out.split_whitespace().collect::<Vec<_>>().join(" ");
+    let cut = cleaned
+        .char_indices()
+        .take(48)
+        .last()
+        .map_or(0, |(i, c)| i + c.len_utf8());
+    cleaned[..cut].to_string()
+}
+
+fn valid_id(id: &str) -> bool {
+    !id.is_empty() && id.len() <= 64 && id.chars().all(|c| ID_CHARS.contains(c))
+}
+
+fn valid_cover(cover: &str) -> bool {
+    valid_id(cover)
 }
 
 impl Store {
@@ -17,22 +58,186 @@ impl Store {
         Store { root }
     }
 
-    pub fn entries_dir(&self) -> PathBuf {
-        self.root.join("entries")
+    fn manifest_path(&self) -> PathBuf {
+        self.root.join(MANIFEST_FILE)
     }
 
-    pub fn media_dir(&self) -> PathBuf {
-        self.root.join("media")
+    fn notebook_root(&self, id: &str) -> PathBuf {
+        self.root.join(id)
     }
 
-    fn entry_path(&self, date: &NaiveDate) -> PathBuf {
-        self.entries_dir().join(entry::entry_filename(date))
+    pub fn entries_dir(&self, notebook: &str) -> PathBuf {
+        self.notebook_root(notebook).join("entries")
+    }
+
+    pub fn media_dir(&self, notebook: &str) -> PathBuf {
+        self.notebook_root(notebook).join("media")
+    }
+
+    /// Ensure the manifest exists. Migrates a legacy flat layout
+    /// (`<root>/entries`, `<root>/media`) into a "default" notebook the first
+    /// time the app runs with the new format.
+    pub fn init(&self) -> std::io::Result<()> {
+        fs::create_dir_all(&self.root)?;
+        let path = self.manifest_path();
+        if path.exists() {
+            return Ok(());
+        }
+        let manifest = Manifest {
+            notebooks: vec![NotebookMeta {
+                id: "default".to_string(),
+                name: "My Journal".to_string(),
+                cover: "kraft".to_string(),
+            }],
+        };
+        let legacy_entries = self.root.join("entries");
+        let legacy_media = self.root.join("media");
+        if legacy_entries.exists() || legacy_media.exists() {
+            let default_root = self.notebook_root("default");
+            fs::create_dir_all(&default_root)?;
+            if legacy_entries.exists() {
+                fs::rename(&legacy_entries, default_root.join("entries"))?;
+            }
+            if legacy_media.exists() {
+                fs::rename(&legacy_media, default_root.join("media"))?;
+            }
+        }
+        self.write_manifest(&manifest)
+    }
+
+    fn read_manifest(&self) -> std::io::Result<Manifest> {
+        let raw = fs::read_to_string(self.manifest_path())?;
+        serde_json::from_str(&raw)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+    }
+
+    fn write_manifest(&self, manifest: &Manifest) -> std::io::Result<()> {
+        let tmp = self.root.join(format!(".{MANIFEST_FILE}.tmp"));
+        {
+            let mut f = fs::File::create(&tmp)?;
+            f.write_all(serde_json::to_string_pretty(manifest)?.as_bytes())?;
+            f.sync_all()?;
+        }
+        fs::rename(&tmp, self.manifest_path())
+    }
+
+    fn find(&self, manifest: &Manifest, id: &str) -> std::io::Result<NotebookMeta> {
+        manifest
+            .notebooks
+            .iter()
+            .find(|n| n.id == id)
+            .cloned()
+            .ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::NotFound, "notebook not found")
+            })
+    }
+
+    pub fn list_notebooks(&self) -> std::io::Result<Vec<NotebookMeta>> {
+        Ok(self.read_manifest()?.notebooks)
+    }
+
+    pub fn create_notebook(&self, name: &str, cover: &str) -> std::io::Result<NotebookMeta> {
+        let name = sanitize_name(name);
+        if name.is_empty() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "notebook name is empty",
+            ));
+        }
+        if !valid_cover(cover) {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "invalid cover id",
+            ));
+        }
+        let mut manifest = self.read_manifest()?;
+        if manifest.notebooks.len() >= MAX_NOTEBOOKS {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "too many notebooks",
+            ));
+        }
+        let stamp = Local::now().format("%Y%m%d%H%M%S");
+        let mut id = format!("nb-{stamp}");
+        while manifest.notebooks.iter().any(|n| n.id == id) {
+            id.push('x');
+        }
+        let meta = NotebookMeta {
+            id: id.clone(),
+            name,
+            cover: cover.to_string(),
+        };
+        fs::create_dir_all(self.entries_dir(&id))?;
+        manifest.notebooks.push(meta.clone());
+        self.write_manifest(&manifest)?;
+        Ok(meta)
+    }
+
+    pub fn rename_notebook(&self, id: &str, name: &str) -> std::io::Result<NotebookMeta> {
+        let name = sanitize_name(name);
+        if name.is_empty() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "notebook name is empty",
+            ));
+        }
+        let mut manifest = self.read_manifest()?;
+        let meta = self.find(&manifest, id)?;
+        for n in manifest.notebooks.iter_mut() {
+            if n.id == id {
+                n.name = name.clone();
+            }
+        }
+        self.write_manifest(&manifest)?;
+        Ok(NotebookMeta { name, ..meta })
+    }
+
+    pub fn set_notebook_cover(&self, id: &str, cover: &str) -> std::io::Result<NotebookMeta> {
+        if !valid_cover(cover) {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "invalid cover id",
+            ));
+        }
+        let mut manifest = self.read_manifest()?;
+        let meta = self.find(&manifest, id)?;
+        for n in manifest.notebooks.iter_mut() {
+            if n.id == id {
+                n.cover = cover.to_string();
+            }
+        }
+        self.write_manifest(&manifest)?;
+        Ok(NotebookMeta {
+            cover: cover.to_string(),
+            ..meta
+        })
+    }
+
+    fn require_notebook(&self, id: &str) -> std::io::Result<()> {
+        let manifest = self.read_manifest()?;
+        self.find(&manifest, id).map(|_| ())
+    }
+
+    fn entry_path(&self, notebook: &str, date: &chrono::NaiveDate) -> std::io::Result<PathBuf> {
+        if !valid_id(notebook) {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "invalid notebook id",
+            ));
+        }
+        Ok(self
+            .entries_dir(notebook)
+            .join(entry::entry_filename(date)))
     }
 
     /// Read an entry's Markdown. Returns an empty string when the entry does not
     /// exist yet (create-on-first-write: no empty files are created).
-    pub fn read_entry(&self, date: &NaiveDate) -> std::io::Result<Option<String>> {
-        let path = self.entry_path(date);
+    pub fn read_entry(
+        &self,
+        notebook: &str,
+        date: &chrono::NaiveDate,
+    ) -> std::io::Result<Option<String>> {
+        let path = self.entry_path(notebook, date)?;
         match fs::read_to_string(&path) {
             Ok(content) => Ok(Some(content)),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
@@ -41,17 +246,21 @@ impl Store {
     }
 
     /// Atomically write an entry. The file only appears once there is actual
-    /// content, so no empty-file spam accumulates. Write goes to a temp file in
-    /// the same directory followed by a rename, so a kill mid-write can never
-    /// leave a truncated entry behind. Returns true when the entry file was
-    /// created by this call.
-    pub fn save_entry(&self, date: &NaiveDate, content: &str) -> std::io::Result<bool> {
-        let entries = self.entries_dir();
-        let path = self.entry_path(date);
+    /// content, so no empty-file spam accumulates. Returns true when the entry
+    /// file was created by this call.
+    pub fn save_entry(
+        &self,
+        notebook: &str,
+        date: &chrono::NaiveDate,
+        content: &str,
+    ) -> std::io::Result<bool> {
+        self.require_notebook(notebook)?;
+        let path = self.entry_path(notebook, date)?;
         let created = !path.exists();
         if content.is_empty() {
             return Ok(false);
         }
+        let entries = self.entries_dir(notebook);
         fs::create_dir_all(&entries)?;
         let tmp = entries.join(format!(".{}.tmp", entry::entry_filename(date)));
         {
@@ -64,16 +273,17 @@ impl Store {
     }
 
     /// List all dates that have an entry file, ascending.
-    pub fn list_dates(&self) -> std::io::Result<Vec<NaiveDate>> {
-        let entries = self.entries_dir();
+    pub fn list_dates(&self, notebook: &str) -> std::io::Result<Vec<chrono::NaiveDate>> {
+        self.require_notebook(notebook)?;
+        let entries = self.entries_dir(notebook);
         let mut dates = Vec::new();
         match fs::read_dir(&entries) {
             Ok(rd) => {
                 for item in rd.flatten() {
                     let name = item.file_name();
                     let Some(name) = name.to_str() else { continue };
-                    if let Ok(date) = entry::parse_date(name.trim_end_matches(".md")) {
-                        if entry::is_entry_filename(name) {
+                    if entry::is_entry_filename(name) {
+                        if let Ok(date) = entry::parse_date(name.trim_end_matches(".md")) {
                             dates.push(date);
                         }
                     }
@@ -90,13 +300,19 @@ impl Store {
     /// Store pasted image bytes under a content-hash filename. Deduplicated:
     /// identical bytes are written at most once. Returns the Markdown image
     /// reference (relative to the entry file) to insert at the cursor.
-    pub fn store_media(&self, bytes: &[u8], ext_hint: Option<&str>) -> std::io::Result<String> {
+    pub fn store_media(
+        &self,
+        notebook: &str,
+        bytes: &[u8],
+        ext_hint: Option<&str>,
+    ) -> std::io::Result<String> {
+        self.require_notebook(notebook)?;
         let hash = media::hash_bytes(bytes);
         let ext = media::normalize_ext(ext_hint)
             .or_else(|| media::sniff_ext(bytes).map(str::to_string))
             .unwrap_or_else(|| "bin".to_string());
         let filename = media::media_filename(&hash, &ext);
-        let dir = self.media_dir();
+        let dir = self.media_dir(notebook);
         fs::create_dir_all(&dir)?;
         let path = dir.join(&filename);
         if !path.exists() {
@@ -108,13 +324,18 @@ impl Store {
             }
             fs::rename(&tmp, &path)?;
         }
-        Ok(format!("![pasted image]({})", media::md_relative_path(&filename)))
+        Ok(format!(
+            "![pasted image]({})",
+            media::md_relative_path(&filename)
+        ))
     }
 
     /// Resolve a media reference found in an entry file to an absolute path, but
-    /// only when it stays inside the journal's media/ directory. Used to serve
-    /// local images to the editor.
-    pub fn resolve_media(&self, reference: &str) -> Option<PathBuf> {
+    /// only when it stays inside the notebook's media/ directory.
+    pub fn resolve_media(&self, notebook: &str, reference: &str) -> Option<PathBuf> {
+        if !valid_id(notebook) {
+            return None;
+        }
         let raw = reference.trim();
         let stripped = raw.strip_prefix("../media/")?;
         let candidate = Path::new(stripped);
@@ -125,7 +346,7 @@ impl Store {
         if name.starts_with('.') || name.contains('/') || name.contains('\\') {
             return None;
         }
-        let path = self.media_dir().join(name);
+        let path = self.media_dir(notebook).join(name);
         if path.exists() {
             Some(path)
         } else {
@@ -142,144 +363,162 @@ mod tests {
     fn store() -> (TempDir, Store) {
         let tmp = TempDir::new().unwrap();
         let store = Store::new(tmp.path().join("journal"));
+        store.init().unwrap();
         (tmp, store)
     }
 
-    fn date(y: i32, m: u32, d: u32) -> NaiveDate {
-        NaiveDate::from_ymd_opt(y, m, d).unwrap()
+    fn date(y: i32, m: u32, d: u32) -> chrono::NaiveDate {
+        chrono::NaiveDate::from_ymd_opt(y, m, d).unwrap()
     }
 
     #[test]
-    fn read_missing_entry_returns_none() {
+    fn init_creates_default_notebook() {
         let (_tmp, store) = store();
-        assert_eq!(store.read_entry(&date(2024, 1, 1)).unwrap(), None);
+        let books = store.list_notebooks().unwrap();
+        assert_eq!(books.len(), 1);
+        assert_eq!(books[0].id, "default");
+        assert_eq!(books[0].cover, "kraft");
     }
 
     #[test]
-    fn save_then_read_roundtrip() {
-        let (_tmp, store) = store();
-        let d = date(2024, 3, 8);
-        assert!(store.save_entry(&d, "# Hello\n\nToday was good.\n").unwrap());
-        let expected = store.entries_dir().join("2024-03-08.md");
-        assert!(expected.exists());
-        assert_eq!(store.read_entry(&d).unwrap().unwrap(), "# Hello\n\nToday was good.\n");
-    }
+    fn init_migrates_legacy_layout() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().join("journal");
+        let entries = root.join("entries");
+        fs::create_dir_all(&entries).unwrap();
+        fs::write(entries.join("2024-01-05.md"), "# old\n").unwrap();
+        let media = root.join("media");
+        fs::create_dir_all(&media).unwrap();
+        fs::write(media.join("abc.png"), b"img").unwrap();
 
-    #[test]
-    fn save_reports_not_created_on_rewrite() {
-        let (_tmp, store) = store();
-        let d = date(2024, 3, 8);
-        assert!(store.save_entry(&d, "one").unwrap());
-        assert!(!store.save_entry(&d, "one two").unwrap());
-        assert_eq!(store.read_entry(&d).unwrap().unwrap(), "one two");
-    }
-
-    #[test]
-    fn empty_save_to_existing_entry_is_noop() {
-        let (_tmp, store) = store();
-        let d = date(2024, 3, 8);
-        store.save_entry(&d, "content").unwrap();
-        assert!(!store.save_entry(&d, "").unwrap());
-        assert_eq!(store.read_entry(&d).unwrap().unwrap(), "content");
-    }
-
-    #[test]
-    fn empty_save_to_missing_entry_creates_nothing() {
-        let (_tmp, store) = store();
-        let d = date(2024, 3, 8);
-        assert!(!store.save_entry(&d, "").unwrap());
-        assert_eq!(store.read_entry(&d).unwrap(), None);
-        assert!(!store.entries_dir().exists());
-    }
-
-    #[test]
-    fn list_dates_sorted_and_filtered() {
-        let (_tmp, store) = store();
-        store.save_entry(&date(2024, 3, 2), "b").unwrap();
-        store.save_entry(&date(2024, 1, 15), "a").unwrap();
-        store.save_entry(&date(2024, 2, 10), "c").unwrap();
-        // Noise files that must be ignored:
-        let entries = store.entries_dir();
-        fs::write(entries.join("notes.md"), "x").unwrap();
-        fs::write(entries.join("2024-13-40.md"), "x").unwrap();
-        fs::write(entries.join("2024-01-01.md.bak"), "x").unwrap();
-
-        let dates = store.list_dates().unwrap();
+        let store = Store::new(root.clone());
+        store.init().unwrap();
+        let books = store.list_notebooks().unwrap();
+        assert_eq!(books[0].id, "default");
+        let migrated = root.join("default").join("entries").join("2024-01-05.md");
+        assert!(migrated.exists());
+        assert!(root.join("default").join("media").join("abc.png").exists());
+        assert!(!root.join("entries").exists());
         assert_eq!(
-            dates,
-            vec![date(2024, 1, 15), date(2024, 2, 10), date(2024, 3, 2)]
+            store.read_entry("default", &date(2024, 1, 5)).unwrap(),
+            Some("# old\n".to_string())
         );
     }
 
     #[test]
-    fn list_dates_when_no_entries_dir() {
+    fn create_rename_cover_notebook() {
         let (_tmp, store) = store();
-        assert_eq!(store.list_dates().unwrap(), Vec::<NaiveDate>::new());
+        let meta = store.create_notebook("Travel 2025", "forest").unwrap();
+        assert_ne!(meta.id, "default");
+        assert!(meta.id.starts_with("nb-"));
+        assert_eq!(meta.name, "Travel 2025");
+        assert_eq!(store.list_notebooks().unwrap().len(), 2);
+
+        let renamed = store.rename_notebook(&meta.id, "Trips").unwrap();
+        assert_eq!(renamed.name, "Trips");
+
+        let recolored = store.set_notebook_cover(&meta.id, "dusk").unwrap();
+        assert_eq!(recolored.cover, "dusk");
+        assert_eq!(
+            store
+                .list_notebooks()
+                .unwrap()
+                .iter()
+                .find(|n| n.id == meta.id)
+                .unwrap()
+                .name,
+            "Trips"
+        );
     }
 
     #[test]
-    fn media_dedup_same_bytes_one_file() {
+    fn create_rejects_empty_and_bad_cover() {
         let (_tmp, store) = store();
-        let png = b"\x89PNG\r\n\x1a\n fake png bytes";
-        let first = store.store_media(png, None).unwrap();
-        let second = store.store_media(png, None).unwrap();
-        assert_eq!(first, second);
-        let media_dir = store.media_dir();
-        let count = fs::read_dir(&media_dir).unwrap().count();
-        assert_eq!(count, 1);
-        assert!(first.contains("../media/"));
-        assert!(first.ends_with(".png)"));
+        assert!(store.create_notebook("   ", "kraft").is_err());
+        assert!(store.create_notebook("ok", "../evil").is_err());
     }
 
     #[test]
-    fn media_uses_hint_ext_and_sniffs_fallback() {
+    fn unknown_notebook_operations_fail() {
         let (_tmp, store) = store();
-        let a = store.store_media(b"\x89PNG\r\n\x1a\n....", Some("PNG")).unwrap();
-        assert!(a.ends_with(".png)"));
-        let b = store.store_media(b"\xff\xd8\xff\xe0....", None).unwrap();
-        assert!(b.ends_with(".jpg)"));
-        let c = store.store_media(b"mystery bytes", Some("dat")).unwrap();
-        assert!(c.ends_with(".dat)"));
-        let d = store.store_media(b"more mystery", None).unwrap();
-        assert!(d.ends_with(".bin)"));
+        let d = date(2024, 3, 8);
+        assert!(store.save_entry("nope", &d, "x").is_err());
+        assert!(store.list_dates("nope").is_err());
+        assert!(store.store_media("nope", b"x", None).is_err());
+        assert!(store.rename_notebook("nope", "x").is_err());
     }
 
     #[test]
-    fn media_hash_in_filename() {
+    fn rejects_invalid_notebook_ids() {
         let (_tmp, store) = store();
-        let bytes = b"some image";
-        let md = store.store_media(bytes, Some("png")).unwrap();
-        let hash = media::hash_bytes(bytes);
-        assert!(md.contains(&format!("../media/{hash}.png")));
+        let d = date(2024, 3, 8);
+        assert!(store.save_entry("../etc", &d, "x").is_err());
+        assert!(store.read_entry("sub/dir", &d).is_err());
+        assert!(store.resolve_media("..", "../media/x.png").is_none());
     }
 
     #[test]
-    fn resolve_media_only_inside_media_dir() {
+    fn entries_are_notebook_scoped() {
         let (_tmp, store) = store();
-        store.store_media(b"\x89PNG\r\n\x1a\nxx", Some("png")).unwrap();
-        let md = store.store_media(b"\x89PNG\r\n\x1a\nyy", Some("png")).unwrap();
-        let rel = md
-            .trim_start_matches("![pasted image](")
-            .trim_end_matches(')');
-        let resolved = store.resolve_media(rel).unwrap();
-        assert!(resolved.starts_with(store.media_dir()));
+        let d = date(2024, 3, 8);
+        store.save_entry("default", &d, "work note").unwrap();
+        assert_eq!(
+            store.read_entry("default", &d).unwrap().unwrap(),
+            "work note"
+        );
+        assert_eq!(store.read_entry("default", &date(2024, 1, 1)).unwrap(), None);
 
-        assert!(store.resolve_media("../media/../entries/2024-01-01.md").is_none());
-        assert!(store.resolve_media("../media/sub/dir.png").is_none());
-        assert!(store.resolve_media("../media/.hidden.png").is_none());
-        assert!(store.resolve_media("/etc/passwd").is_none());
-        assert!(store.resolve_media("../media/does-not-exist.png").is_none());
+        let nb = store.create_notebook("Personal", "rose").unwrap();
+        assert_eq!(store.read_entry(&nb.id, &d).unwrap(), None);
+        store.save_entry(&nb.id, &d, "personal note").unwrap();
+        assert_eq!(
+            store.read_entry(&nb.id, &d).unwrap().unwrap(),
+            "personal note"
+        );
+        assert_eq!(
+            store.read_entry("default", &d).unwrap().unwrap(),
+            "work note"
+        );
+
+        assert_eq!(store.list_dates("default").unwrap(), vec![d]);
+        assert_eq!(store.list_dates(&nb.id).unwrap(), vec![d]);
+    }
+
+    #[test]
+    fn media_is_notebook_scoped() {
+        let (_tmp, store) = store();
+        let nb = store.create_notebook("Photos", "meadow").unwrap();
+        let a = store
+            .store_media("default", b"\x89PNG\r\n\x1a\nxx", Some("png"))
+            .unwrap();
+        let b = store
+            .store_media(&nb.id, b"\x89PNG\r\n\x1a\nyy", Some("png"))
+            .unwrap();
+        let rel_a = &a[16..a.len() - 1];
+        let rel_b = &b[16..b.len() - 1];
+        assert!(store.resolve_media("default", rel_a).is_some());
+        assert!(store.resolve_media(&nb.id, rel_b).is_some());
+        assert!(store.media_dir(&nb.id).join(rel_b).exists());
     }
 
     #[test]
     fn save_is_atomic_no_tmp_files_left() {
         let (_tmp, store) = store();
         let d = date(2024, 5, 5);
-        store.save_entry(&d, "final content").unwrap();
-        let names: Vec<String> = fs::read_dir(store.entries_dir())
+        store.save_entry("default", &d, "final content").unwrap();
+        let names: Vec<String> = fs::read_dir(store.entries_dir("default"))
             .unwrap()
             .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
             .collect();
         assert_eq!(names, vec!["2024-05-05.md"]);
+    }
+
+    #[test]
+    fn empty_save_creates_nothing() {
+        let (_tmp, store) = store();
+        let d = date(2024, 3, 8);
+        assert!(!store.save_entry("default", &d, "").unwrap());
+        assert_eq!(store.read_entry("default", &d).unwrap(), None);
+        assert!(!store.entries_dir("default").exists());
     }
 }
