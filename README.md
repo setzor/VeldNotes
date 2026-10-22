@@ -4,6 +4,17 @@ A cozy, local-first daily journaling app for Windows and Linux desktop/laptop.
 
 Open it and it's today's page. Type. Close it. That's the whole loop.
 
+## Download
+
+Grab the latest release from the [Releases](https://github.com/setzor/VeldNotes/releases) page.
+
+| Platform | Format | Install |
+|---|---|---|
+| Linux (any distro) | `.AppImage` | `chmod +x VeldNotes_*.AppImage && ./VeldNotes_*.AppImage` |
+| Debian / Ubuntu / Mint | `.deb` | `sudo dpkg -i VeldNotes_*.deb` (or double-click) |
+| Fedora / RHEL / openSUSE | `.rpm` | `sudo rpm -i VeldNotes-*.rpm` (or `sudo dnf install VeldNotes-*.rpm`) |
+| Windows | `.msi` | Double-click the `.msi` installer |
+
 VeldNotes is inspired by the calm minimalism of a pocket notebook: warm
 kraft-paper tones, grass-gold accents, a readable serif, generous whitespace.
 No streaks, no badges, no guilt. Your journal is a plain folder of Markdown
