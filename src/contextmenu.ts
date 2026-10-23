@@ -1,4 +1,6 @@
+import type { Editor } from "@tiptap/core";
 import type { NotebookMeta } from "./api";
+import { frostedPrompt } from "./prompt";
 
 interface MenuEntry {
   label: string;
@@ -27,9 +29,14 @@ export interface SidebarActions {
 }
 
 let sidebarActions: SidebarActions | null = null;
+let getEditor: () => Editor | null = () => null;
 
 export function setSidebarActions(actions: SidebarActions): void {
   sidebarActions = actions;
+}
+
+export function setEditorAccessor(accessor: () => Editor | null): void {
+  getEditor = accessor;
 }
 
 function buildEntries(target: HTMLElement): MenuEntry[] {
@@ -88,10 +95,57 @@ function buildEntries(target: HTMLElement): MenuEntry[] {
       },
     );
     if (inEditor) {
-      entries.push(
-        { label: "Bold", run: () => void document.execCommand("bold") },
-        { label: "Italic", run: () => void document.execCommand("italic") },
-      );
+      const editor = getEditor();
+      if (editor) {
+        const chain = () => editor.chain().focus();
+        entries.push(
+          {
+            label: "Bold",
+            run: () => chain().toggleBold().run(),
+          },
+          {
+            label: "Italic",
+            run: () => chain().toggleItalic().run(),
+          },
+          {
+            label: "Underline",
+            run: () => chain().toggleUnderline().run(),
+          },
+          {
+            label: "Highlight",
+            run: () => chain().toggleHighlight().run(),
+          },
+          {
+            label: "Code",
+            run: () => chain().toggleCode().run(),
+          },
+          {
+            label: "Link…",
+            run: () => {
+              void (async () => {
+                const previous = editor.getAttributes("link").href as
+                  | string
+                  | undefined;
+                const href = await frostedPrompt(
+                  "Link URL",
+                  previous ?? "https://",
+                );
+                if (href === null) return;
+                if (href === "") {
+                  chain().extendMarkRange("link").unsetLink().run();
+                  return;
+                }
+                chain().extendMarkRange("link").setLink({ href }).run();
+              })();
+            },
+          },
+        );
+      } else {
+        entries.push(
+          { label: "Bold", run: () => void document.execCommand("bold") },
+          { label: "Italic", run: () => void document.execCommand("italic") },
+        );
+      }
     }
     return entries;
   }

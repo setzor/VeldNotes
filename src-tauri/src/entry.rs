@@ -1,7 +1,6 @@
 use chrono::{Local, NaiveDate};
 
 pub const DATE_FORMAT: &str = "%Y-%m-%d";
-const FILENAME_LEN: usize = 10 + ".md".len();
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct InvalidDate(pub String);
@@ -23,14 +22,46 @@ pub fn parse_date(raw: &str) -> Result<NaiveDate, InvalidDate> {
     }
 }
 
+/// Current entry format: a TipTap JSON document per day, `YYYY-MM-DD.json`.
 pub fn entry_filename(date: &NaiveDate) -> String {
+    format!("{}.json", date.format(DATE_FORMAT))
+}
+
+/// Legacy entry format from the Markdown era, `YYYY-MM-DD.md`.
+pub fn legacy_entry_filename(date: &NaiveDate) -> String {
     format!("{}.md", date.format(DATE_FORMAT))
 }
 
+fn filename_date(name: &str, ext_len: usize) -> Option<NaiveDate> {
+    let stem = name.get(..name.len().checked_sub(ext_len)?)?;
+    parse_date(stem).ok()
+}
+
+/// Recognize a current (`.json`) or legacy (`.md`) entry filename and return
+/// the date it refers to.
+pub fn entry_filename_date(name: &str) -> Option<NaiveDate> {
+    if let Some(date) = name
+        .len()
+        .checked_sub(".json".len())
+        .and_then(|cut| name.get(..cut))
+        .and_then(|stem| parse_date(stem).ok())
+    {
+        if name.ends_with(".json") {
+            return Some(date);
+        }
+    }
+    if name.ends_with(".md") {
+        return filename_date(name, ".md".len());
+    }
+    None
+}
+
 pub fn is_entry_filename(name: &str) -> bool {
-    name.len() == FILENAME_LEN
-        && name.ends_with(".md")
-        && parse_date(&name[..FILENAME_LEN - 3]).is_ok()
+    entry_filename_date(name).is_some()
+}
+
+pub fn is_legacy_entry_filename(name: &str) -> bool {
+    name.ends_with(".md") && filename_date(name, ".md".len()).is_some()
 }
 
 pub fn today_local() -> NaiveDate {
@@ -72,11 +103,22 @@ mod tests {
     #[test]
     fn filename_roundtrip() {
         let d = NaiveDate::from_ymd_opt(2024, 1, 5).unwrap();
-        assert_eq!(entry_filename(&d), "2024-01-05.md");
+        assert_eq!(entry_filename(&d), "2024-01-05.json");
+        assert_eq!(legacy_entry_filename(&d), "2024-01-05.md");
+        assert!(is_entry_filename("2024-01-05.json"));
         assert!(is_entry_filename("2024-01-05.md"));
+        assert!(is_legacy_entry_filename("2024-01-05.md"));
+        assert!(!is_legacy_entry_filename("2024-01-05.json"));
         assert!(!is_entry_filename("2024-01-05.txt"));
-        assert!(!is_entry_filename("2024-1-5.md"));
-        assert!(!is_entry_filename("notes.md"));
-        assert!(!is_entry_filename("2024-01-05.md.bak"));
+        assert!(!is_entry_filename("2024-1-5.json"));
+        assert!(!is_entry_filename("notes.json"));
+        assert!(!is_entry_filename("2024-01-05.json.bak"));
+        assert_eq!(
+            entry_filename_date("2024-01-05.json"),
+            Some(NaiveDate::from_ymd_opt(2024, 1, 5).unwrap())
+        );
+        assert_eq!(entry_filename_date("2024-01-05.md"),
+            Some(NaiveDate::from_ymd_opt(2024, 1, 5).unwrap()));
+        assert_eq!(entry_filename_date("2024-01-05.txt"), None);
     }
 }
