@@ -224,6 +224,7 @@ export function createToolbar(
 
   const update = (): void => {
     const editor = getEditor();
+    watchToolbarEditor(editor, update);
     const inTable = editor ? editor.isActive("table") : false;
     for (const el of Array.from(
       container.querySelectorAll<HTMLButtonElement>(".tool-btn"),
@@ -240,6 +241,17 @@ export function createToolbar(
     }
   };
   document.addEventListener("selectionchange", update);
-  window.setTimeout(update, 0);
+  update();
+}
+
+const toolbarWatchers = new WeakMap<Editor, boolean>();
+
+function watchToolbarEditor(
+  editor: Editor | null,
+  update: () => void,
+): void {
+  if (!editor || toolbarWatchers.has(editor)) return;
+  toolbarWatchers.set(editor, true);
+  editor.on("transaction", () => update());
 }
 
