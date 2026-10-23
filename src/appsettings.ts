@@ -1,11 +1,13 @@
 import { dataDir } from "./api";
 import {
   AUTOSAVE_CHOICES,
+  FONTSIZE_CHOICES,
   WEEKDAY_CHOICES,
   loadSettings,
   saveSettings,
   type AppSettings,
 } from "./settings";
+import { EDITOR_FONTS } from "./fonts";
 import {
   applyTheme,
   loadMode,
@@ -55,6 +57,12 @@ export function installAppSettings(cb: AppSettingsCallbacks): void {
 
     <label class="nb-field">Calendar starts on</label>
     <div id="as-weekday"></div>
+
+    <label class="nb-field">Default font</label>
+    <select id="as-font"></select>
+
+    <label class="nb-field">Default text size</label>
+    <select id="as-fontsize"></select>
 
     <label class="nb-field">Journal folder</label>
     <div id="as-datadir" title="">(unknown)</div>
@@ -169,6 +177,37 @@ export function openAppSettings(): void {
       callbacks?.onSettingsChanged(current);
     },
   );
+
+  const fontSelect = overlayEl.querySelector<HTMLSelectElement>("#as-font")!;
+  fontSelect.textContent = "";
+  for (const font of EDITOR_FONTS) {
+    const opt = document.createElement("option");
+    opt.value = font.id;
+    opt.textContent = font.label;
+    opt.selected = font.id === (current.editorFontId || "journal");
+    fontSelect.appendChild(opt);
+  }
+  fontSelect.addEventListener("change", () => {
+    current.editorFontId = fontSelect.value;
+    saveSettings(current);
+    callbacks?.onSettingsChanged(current);
+  });
+
+  const fontsizeSelect =
+    overlayEl.querySelector<HTMLSelectElement>("#as-fontsize")!;
+  fontsizeSelect.textContent = "";
+  for (const choice of FONTSIZE_CHOICES) {
+    const opt = document.createElement("option");
+    opt.value = String(choice.value);
+    opt.textContent = choice.label;
+    opt.selected = choice.value === current.editorFontSize;
+    fontsizeSelect.appendChild(opt);
+  }
+  fontsizeSelect.addEventListener("change", () => {
+    current.editorFontSize = Number(fontsizeSelect.value);
+    saveSettings(current);
+    callbacks?.onSettingsChanged(current);
+  });
 
   overlayEl.hidden = false;
   (overlayEl.querySelector("#as-themes button") as HTMLElement | null)?.focus();

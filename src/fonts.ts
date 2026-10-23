@@ -58,10 +58,10 @@ export function fontStack(fontId: string): string {
   return EDITOR_FONTS.find((f) => f.id === fontId)?.stack ?? EDITOR_FONTS[0].stack;
 }
 
-/** Apply the editor font for a notebook to the editor root element. */
-export function applyEditorFont(notebookId: string): void {
-  document.documentElement.style.setProperty(
-    "--editor-font",
-    fontStack(loadEditorFont(notebookId)),
-  );
+/**
+ * Apply a font stack as the document-wide default (`--editor-font`). Text
+ * without an explicit per-selection font falls back to this.
+ */
+export function applyDefaultFontStack(stack: string): void {
+  document.documentElement.style.setProperty("--editor-font", stack);
 }

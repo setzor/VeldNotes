@@ -1066,6 +1066,18 @@ button {
   outline: none;
   min-height: 50vh;
   font-family: var(--editor-font, var(--serif));
+  position: relative;
+  /* freeform sheet: room to click and place blocks anywhere */
+  min-height: 120vh;
+  cursor: text;
+}
+
+.entry-editor [data-placed] {
+  max-width: calc(100% - 48px);
+}
+
+.entry-editor p[data-placed] {
+  min-width: 24px;
 }
 
 .entry-editor h1,
@@ -1163,7 +1175,19 @@ button {
 
 .entry-image {
   margin: 1em 0;
-  text-align: center;
+}
+
+.entry-image[data-text-align="center"] {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.entry-image[data-text-align="right"] {
+  margin-left: auto;
+}
+
+.entry-image[data-text-align="left"] {
+  margin-right: auto;
 }
 
 .entry-image img {
@@ -1874,12 +1898,26 @@ button {
   position: relative;
   margin: 0 0 0.9em;
   border: 1px dashed var(--accent-soft);
+  max-width: 100%;
   border-radius: 12px;
   background: color-mix(in srgb, var(--paper) 92%, #fff);
   min-height: 120px;
   padding: 8px;
   cursor: pointer;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.entry-canvas[data-text-align="center"] {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.entry-canvas[data-text-align="right"] {
+  margin-left: auto;
+}
+
+.entry-canvas[data-text-align="left"] {
+  margin-right: auto;
 }
 
 .entry-canvas:focus-visible,
@@ -2100,4 +2138,30 @@ button {
 #prompt-ok {
   border-color: var(--accent-soft) !important;
   background: var(--accent-bg) !important;
+}
+
+/* --- canvas error toast (frosted) -------------------------------------------- */
+
+#canvas-error {
+  position: fixed;
+  z-index: 300;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 18px;
+  background: color-mix(in srgb, var(--card) 78%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  #canvas-error {
+    background: var(--card);
+  }
 }

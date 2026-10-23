@@ -1,6 +1,7 @@
 export interface AppSettings {
   autosaveDelayMs: number;
   editorFontSize: number;
+  editorFontId: string;
   firstWeekday: number | "locale";
 }
 
@@ -9,6 +10,7 @@ const KEY = "veldnotes.appsettings";
 const DEFAULTS: AppSettings = {
   autosaveDelayMs: 600,
   editorFontSize: 17,
+  editorFontId: "journal",
   firstWeekday: "locale",
 };
 
@@ -18,6 +20,7 @@ function isSettings(v: unknown): v is AppSettings {
   return (
     typeof s.autosaveDelayMs === "number" &&
     typeof s.editorFontSize === "number" &&
+    (s.editorFontId === undefined || typeof s.editorFontId === "string") &&
     (s.firstWeekday === "locale" ||
       (typeof s.firstWeekday === "number" && s.firstWeekday >= 0 && s.firstWeekday <= 6))
   );
