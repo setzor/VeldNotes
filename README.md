@@ -99,6 +99,7 @@ src/                  TypeScript frontend (thin UI layer)
   typography.ts       per-selection font family/size marks
   legacyMarkdown.ts   one-time import of old Markdown entries
   canvas.ts           free-form canvas editor overlay (Excalidraw, MIT)
+  clipboard.ts        image/sketch cut & copy with real clipboard payloads
   autosave.ts         debounced autosave with in-flight chaining
   paste.ts            image paste/drop -> Rust media store
   api.ts              typed wrappers around Tauri commands

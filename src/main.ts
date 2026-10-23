@@ -425,28 +425,6 @@ window.addEventListener("veldnotes:open-shelf", () => {
 // The toolbar font/size dropdowns now apply per-selection (see typography.ts);
 // the document-wide defaults live in app settings and are applied via CSS vars.
 
-window.addEventListener("veldnotes:delete-image", (event) => {
-  const src = (event as CustomEvent<{ src: string }>).detail.src;
-  if (!editor || !src) return;
-  const doc = editor.state.doc;
-  let targetPos: number | null = null;
-  doc.descendants((node, pos) => {
-    if (targetPos !== null) return false;
-    if (node.type.name === "image" && node.attrs.src === src) {
-      targetPos = pos;
-      return false;
-    }
-    return true;
-  });
-  if (targetPos === null) return;
-  editor
-    .chain()
-    .focus()
-    .setNodeSelection(targetPos)
-    .deleteSelection()
-    .run();
-});
-
 /* --- delete day's note with confirmation ------------------------------------ */
 
 function askConfirm(title: string, body: string): Promise<boolean> {
