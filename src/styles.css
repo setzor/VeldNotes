@@ -921,17 +921,6 @@ button {
   padding: 2px 4px;
 }
 
-.shelf-cover-pick {
-  display: none;
-  flex-wrap: wrap;
-  gap: 3px;
-  justify-content: center;
-}
-
-.shelf-item:hover .shelf-cover-pick {
-  display: flex;
-}
-
 .cover-dot {
   width: 13px;
   height: 13px;
@@ -1333,20 +1322,6 @@ button {
   pointer-events: none;
 }
 
-.shelf-emoji-pick {
-  display: none;
-  flex-wrap: wrap;
-  gap: 2px;
-  justify-content: center;
-  max-height: 60px;
-  overflow-y: auto;
-  margin-top: 3px;
-}
-
-.shelf-item:hover .shelf-emoji-pick {
-  display: flex;
-}
-
 .emoji-pick,
 .emoji-none {
   width: 22px;
@@ -1441,4 +1416,217 @@ button {
 .ctx-item.disabled {
   color: var(--ink-faint);
   cursor: default;
+}
+
+/* --- shelf edit button ------------------------------------------------------- */
+
+.shelf-edit-btn {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  z-index: 4;
+  width: 20px;
+  height: 20px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
+
+.shelf-item:hover .shelf-edit-btn,
+.shelf-edit-btn:focus-visible {
+  display: inline-flex;
+}
+
+.shelf-edit-btn:hover {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+/* --- notebook settings dialog (frosted) --------------------------------------- */
+
+#nb-settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#nb-settings-overlay[hidden] {
+  display: none;
+}
+
+#nb-settings {
+  width: min(400px, calc(100vw - 48px));
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  background: color-mix(in srgb, var(--card) 78%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  padding: 22px 24px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  #nb-settings {
+    background: var(--card);
+  }
+}
+
+#nb-settings-title {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+#nb-preview {
+  position: relative;
+  display: flex;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  margin-bottom: 8px;
+  background: linear-gradient(150deg, var(--cover-a, #a8862d), var(--cover-b, #7d5f16));
+  color: #f8f2e2;
+  min-height: 0;
+}
+
+#nb-preview .cover-spine {
+  flex: 0 0 9px;
+  background: linear-gradient(to right, rgba(0,0,0,0.35), rgba(0,0,0,0.12));
+}
+
+#nb-preview .cover-body {
+  flex: 1 1 auto;
+  padding: 12px 14px 10px;
+}
+
+#nb-preview-name {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#nb-preview .cover-rule {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.35);
+  margin: 7px 0 5px;
+}
+
+#nb-preview-sub {
+  font-family: var(--sans);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+#nb-preview-emoji {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%) rotate(-8deg);
+  font-size: 24px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+}
+
+.nb-field {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: 4px;
+}
+
+#nb-name {
+  font-family: var(--sans);
+  font-size: 13.5px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+#nb-name:focus {
+  outline: none;
+  border-color: var(--accent-soft);
+}
+
+#nb-covers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+#nb-covers .cover-dot {
+  width: 22px;
+  height: 22px;
+}
+
+#nb-covers .cover-dot.active,
+#nb-emojis button.active {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+
+#nb-emojis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+#nb-emojis .emoji-pick,
+#nb-emojis .emoji-none {
+  width: 26px;
+  height: 26px;
+  font-size: 16px;
+}
+
+#nb-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+#nb-actions button {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  padding: 6px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+#nb-actions button:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 1px;
+}
+
+#nb-save {
+  background: var(--accent-bg) !important;
+  border-color: var(--accent-soft) !important;
 }

@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from "vitest";
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => ({})) }));
-import { installContextMenu } from "./contextmenu";
+import { installContextMenu, setSidebarActions } from "./contextmenu";
 
 function contextmenuEvent(_target: HTMLElement): MouseEvent {
   return new MouseEvent("contextmenu", { bubbles: true, clientX: 100, clientY: 100 });
@@ -42,5 +42,39 @@ describe("custom context menu", () => {
     expect(labels).toContain("Cut");
     expect(labels).toContain("Paste");
     expect(labels).toContain("Bold");
+  });
+});
+
+describe("sidebar context menu", () => {
+  it("shows calendar actions on the calendar, not Copy/Select all", () => {
+    setSidebarActions({
+      openNotebookSettings: () => {},
+      newNotebook: () => {},
+      previousMonth: () => {},
+      nextMonth: () => {},
+      goToday: () => {},
+    });
+    const cal = document.createElement("nav");
+    cal.id = "calendar";
+    document.body.appendChild(cal);
+    cal.dispatchEvent(contextmenuEvent(cal));
+    const menu = document.querySelector("#context-menu") as HTMLElement;
+    const labels = Array.from(menu.querySelectorAll("button")).map((b) => b.textContent);
+    expect(labels).toContain("Previous month");
+    expect(labels).toContain("Jump to today");
+    expect(labels).toContain("New notebook…");
+    expect(labels).not.toContain("Copy");
+    expect(labels).not.toContain("Select all");
+  });
+
+  it("shows notebook settings on the cover", () => {
+    const cover = document.createElement("div");
+    cover.id = "cover";
+    document.body.appendChild(cover);
+    cover.dispatchEvent(contextmenuEvent(cover));
+    const menu = document.querySelector("#context-menu") as HTMLElement;
+    const labels = Array.from(menu.querySelectorAll("button")).map((b) => b.textContent);
+    expect(labels).toContain("Notebook settings…");
+    expect(labels).toContain("Switch notebook…");
   });
 });

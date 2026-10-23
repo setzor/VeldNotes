@@ -2,8 +2,6 @@ import {
   createNotebook,
   listNotebooks,
   renameNotebook,
-  setNotebookCover,
-  setNotebookEmoji,
   type NotebookMeta,
 } from "./api";
 
@@ -150,67 +148,18 @@ export function renderShelf(
       });
     });
 
-    const coverPick = document.createElement("div");
-    coverPick.className = "shelf-cover-pick";
-    for (const style of COVER_STYLES) {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "cover-dot";
-      b.title = style.label;
-      b.style.background = `linear-gradient(135deg, ${style.colors[0]}, ${style.colors[1]})`;
-      b.addEventListener("click", (event) => {
-        event.stopPropagation();
-        void setNotebookCover(nb.id, style.id).then((meta) => {
-          nb.cover = meta.cover;
-          const [a, c] = style.colors;
-          swatch.style.background = `linear-gradient(150deg, ${a}, ${c})`;
-          callbacks.onMetaChange?.(meta);
-        });
-      });
-      coverPick.appendChild(b);
-    }
-    item.appendChild(coverPick);
-
-    // emoji sticker picker (plus a "none" option)
-    const emojiPick = document.createElement("div");
-    emojiPick.className = "shelf-emoji-pick";
-    const none = document.createElement("button");
-    none.type = "button";
-    none.className = "emoji-none";
-    none.title = "No emoji";
-    none.textContent = "\u00d7";
-    none.addEventListener("click", (event) => {
+    const editBtn = document.createElement("button");
+    editBtn.type = "button";
+    editBtn.className = "shelf-edit-btn";
+    editBtn.title = "Notebook settings";
+    editBtn.textContent = "\u270e";
+    editBtn.addEventListener("click", (event) => {
       event.stopPropagation();
-      void setNotebookEmoji(nb.id, null).then((meta) => {
-        nb.emoji = null;
-        swatch.querySelector(".shelf-cover-emoji")?.remove();
-        callbacks.onMetaChange?.(meta);
-      });
+      window.dispatchEvent(
+        new CustomEvent("veldnotes:edit-notebook", { detail: { id: nb.id } }),
+      );
     });
-    emojiPick.appendChild(none);
-    for (const em of COVER_EMOJIS) {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "emoji-pick";
-      b.title = "sticker";
-      b.textContent = em;
-      b.addEventListener("click", (event) => {
-        event.stopPropagation();
-        void setNotebookEmoji(nb.id, em).then((meta) => {
-          nb.emoji = meta.emoji ?? null;
-          swatch.querySelector(".shelf-cover-emoji")?.remove();
-          if (nb.emoji) {
-            const sticker = document.createElement("span");
-            sticker.className = "shelf-cover-emoji";
-            sticker.textContent = nb.emoji;
-            swatch.appendChild(sticker);
-          }
-          callbacks.onMetaChange?.(meta);
-        });
-      });
-      emojiPick.appendChild(b);
-    }
-    item.appendChild(emojiPick);
+    swatch.appendChild(editBtn);
 
     grid.appendChild(item);
   }
