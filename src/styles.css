@@ -705,6 +705,7 @@ button {
 }
 
 #page-header {
+  flex-shrink: 0;
   width: 100%;
   max-width: 720px;
   display: flex;
@@ -769,11 +770,13 @@ button {
   box-shadow: var(--shadow);
   padding: 32px 40px 48px;
   min-height: 60vh;
+  flex-shrink: 0;
 }
 
 /* --- formatting toolbar ---------------------------------------------------- */
 
 #toolbar {
+  flex-shrink: 0;
   width: 100%;
   max-width: 720px;
   display: flex;
