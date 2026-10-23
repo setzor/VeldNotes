@@ -87,3 +87,25 @@ export function mediaPath(
 ): Promise<string> {
   return invoke<string>("media_path", { notebook, reference });
 }
+
+export interface MediaData {
+  data: number[];
+  mime: string;
+}
+
+export function readMedia(
+  notebook: string,
+  reference: string,
+): Promise<MediaData> {
+  return invoke<MediaData>("read_media", { notebook, reference });
+}
+
+export function mediaDataUrl(data: number[], mime: string): string {
+  const bytes = new Uint8Array(data);
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return `data:${mime};base64,${btoa(binary)}`;
+}

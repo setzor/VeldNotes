@@ -353,6 +353,19 @@ impl Store {
             None
         }
     }
+
+    /// Read a media file's bytes and sniffed MIME type for display in the
+    /// webview. Only files inside the notebook's media/ directory are served.
+    pub fn read_media(
+        &self,
+        notebook: &str,
+        reference: &str,
+    ) -> Option<(Vec<u8>, &'static str)> {
+        let path = self.resolve_media(notebook, reference)?;
+        let bytes = fs::read(path).ok()?;
+        let mime = media::sniff_mime(&bytes);
+        Some((bytes, mime))
+    }
 }
 
 #[cfg(test)]
@@ -499,6 +512,20 @@ mod tests {
         assert!(store.resolve_media("default", rel_a).is_some());
         assert!(store.resolve_media(&nb.id, rel_b).is_some());
         assert!(store.media_dir(&nb.id).join(rel_b).exists());
+    }
+
+    #[test]
+    fn read_media_returns_bytes_and_mime() {
+        let (_tmp, store) = store();
+        let md = store
+            .store_media("default", b"\x89PNG\r\n\x1a\nxx", Some("png"))
+            .unwrap();
+        let rel = &md[16..md.len() - 1];
+        let (bytes, mime) = store.read_media("default", rel).unwrap();
+        assert_eq!(bytes, b"\x89PNG\r\n\x1a\nxx");
+        assert_eq!(mime, "image/png");
+        assert!(store.read_media("default", "../media/none.png").is_none());
+        assert!(store.read_media("nope", rel).is_none());
     }
 
     #[test]

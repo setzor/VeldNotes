@@ -178,6 +178,28 @@ pub fn save_media(
     })
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct MediaData {
+    pub data: Vec<u8>,
+    pub mime: String,
+}
+
+#[tauri::command]
+pub fn read_media(
+    state: State<'_, AppState>,
+    notebook: String,
+    reference: String,
+) -> Result<MediaData, String> {
+    with_store(&state, |s| {
+        s.read_media(&notebook, &reference)
+            .map(|(data, mime)| MediaData {
+                data,
+                mime: mime.to_string(),
+            })
+            .ok_or_else(|| "media not found".to_string())
+    })
+}
+
 #[tauri::command]
 pub fn media_path(
     state: State<'_, AppState>,
