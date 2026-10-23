@@ -50,6 +50,7 @@ export function makeCoverSwatch(
 
 export interface ShelfCallbacks {
   onSwitch: (id: string) => void;
+  onMetaChange?: (meta: NotebookMeta) => void;
 }
 
 export function renderShelf(
@@ -91,9 +92,10 @@ export function renderShelf(
         const newName = input.value.trim();
         input.replaceWith(name);
         if (newName && newName !== nb.name) {
-          void renameNotebook(nb.id, newName).then(() => {
-            name.textContent = newName;
-            nb.name = newName;
+          void renameNotebook(nb.id, newName).then((meta) => {
+            name.textContent = meta.name;
+            nb.name = meta.name;
+            callbacks.onMetaChange?.(meta);
           });
         }
       };
@@ -117,9 +119,11 @@ export function renderShelf(
       b.style.background = `linear-gradient(135deg, ${style.colors[0]}, ${style.colors[1]})`;
       b.addEventListener("click", (event) => {
         event.stopPropagation();
-        void setNotebookCover(nb.id, style.id).then(() => {
+        void setNotebookCover(nb.id, style.id).then((meta) => {
+          nb.cover = meta.cover;
           const [a, c] = style.colors;
           swatch.style.background = `linear-gradient(150deg, ${a}, ${c})`;
+          callbacks.onMetaChange?.(meta);
         });
       });
       coverPick.appendChild(b);
