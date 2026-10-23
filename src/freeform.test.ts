@@ -87,3 +87,27 @@ describe("image alignment", () => {
     editor.destroy();
   });
 });
+
+describe("sheet growth", () => {
+  it("pads the sheet height only when blocks are placed low", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const editor = createEditor(host, "", { onUpdate: () => {} });
+    const view = editor.view;
+    placeNewBlock(view, 100, 2000);
+    const sheet = view.dom as HTMLElement;
+    const set = sheet.style.getPropertyValue("--sheet-min-height");
+    expect(set).toContain("px");
+    editor.destroy();
+  });
+
+  it("keeps the natural height for empty pages", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const editor = createEditor(host, "", { onUpdate: () => {} });
+    const sheet = editor.view.dom as HTMLElement;
+    editor.commands.insertContent("just text");
+    expect(sheet.style.getPropertyValue("--sheet-min-height")).toBe("");
+    editor.destroy();
+  });
+});
