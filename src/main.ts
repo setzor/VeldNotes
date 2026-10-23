@@ -5,6 +5,7 @@ import {
   getEntry,
   listEntries,
   listNotebooks,
+  renameNotebook,
   saveEntry,
   todayDate,
   type NotebookMeta,
@@ -59,6 +60,7 @@ const calPrevEl = document.querySelector<HTMLButtonElement>("#cal-prev")!;
 const calNextEl = document.querySelector<HTMLButtonElement>("#cal-next")!;
 const coverEl = document.querySelector<HTMLDivElement>("#cover")!;
 const coverBrandEl = document.querySelector<HTMLDivElement>("#cover-brand")!;
+const coverSubEl = document.querySelector<HTMLDivElement>("#cover-sub")!;
 const coverStatsEl = document.querySelector<HTMLDivElement>("#cover-stats")!;
 const entryDateEl = document.querySelector<HTMLSpanElement>("#entry-date")!;
 const saveStateEl = document.querySelector<HTMLSpanElement>("#save-state")!;
@@ -177,6 +179,14 @@ function renderShelfPopover(): void {
       void switchNotebook(id);
       shelfPopEl.hidden = true;
     },
+    onMetaChange: (meta) => {
+      const nb = notebooks.find((n) => n.id === meta.id);
+      if (nb) {
+        nb.name = meta.name;
+        nb.cover = meta.cover;
+      }
+      renderCover();
+    },
   });
 }
 
@@ -196,6 +206,41 @@ async function switchNotebook(id: string): Promise<void> {
 coverEl.addEventListener("click", () => {
   renderShelfPopover();
   shelfPopEl.hidden = !shelfPopEl.hidden;
+});
+
+/* --- editable cover text --------------------------------------------------- */
+
+const COVER_SUB_KEY = "veldnotes.cover.subtitle";
+coverSubEl.textContent =
+  localStorage.getItem(COVER_SUB_KEY) || "a cozy daily journal";
+
+for (const el of [coverBrandEl, coverSubEl]) {
+  el.addEventListener("click", (event) => event.stopPropagation());
+  el.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      el.blur();
+    }
+  });
+}
+
+coverBrandEl.addEventListener("blur", () => {
+  const nb = activeNotebook();
+  const newName = (coverBrandEl.textContent ?? "").trim();
+  if (!nb) return;
+  if (newName && newName !== nb.name) {
+    void renameNotebook(nb.id, newName).then((meta) => {
+      nb.name = meta.name;
+      renderCover();
+      renderShelfPopover();
+    });
+  } else {
+    coverBrandEl.textContent = nb.name;
+  }
+});
+
+coverSubEl.addEventListener("blur", () => {
+  localStorage.setItem(COVER_SUB_KEY, (coverSubEl.textContent ?? "").trim());
 });
 
 document.addEventListener("click", (event) => {
