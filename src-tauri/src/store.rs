@@ -17,6 +17,8 @@ pub struct NotebookMeta {
     pub id: String,
     pub name: String,
     pub cover: String,
+    #[serde(default)]
+    pub emoji: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,6 +53,19 @@ fn valid_id(id: &str) -> bool {
 
 fn valid_cover(cover: &str) -> bool {
     valid_id(cover)
+}
+
+/// A cover emoji must be a single grapheme-ish cluster (few chars, no
+/// control characters) or absent entirely. Stored as the literal emoji.
+fn valid_emoji(emoji: Option<&str>) -> Option<String> {
+    let raw = emoji?.trim();
+    if raw.is_empty() || raw.chars().count() > 8 {
+        return None;
+    }
+    if raw.chars().any(|c| c.is_control()) {
+        return None;
+    }
+    Some(raw.to_string())
 }
 
 impl Store {
@@ -88,6 +103,7 @@ impl Store {
                 id: "default".to_string(),
                 name: "My Journal".to_string(),
                 cover: "kraft".to_string(),
+                emoji: None,
             }],
         };
         let legacy_entries = self.root.join("entries");
@@ -121,6 +137,27 @@ impl Store {
         fs::rename(&tmp, self.manifest_path())
     }
 
+    /// Set a notebook's cover emoji. Pass None to remove the sticker.
+    pub fn set_notebook_emoji(
+        &self,
+        id: &str,
+        emoji: Option<&str>,
+    ) -> std::io::Result<NotebookMeta> {
+        let mut manifest = self.read_manifest()?;
+        let meta = self.find(&manifest, id)?;
+        let emoji = valid_emoji(emoji);
+        for n in manifest.notebooks.iter_mut() {
+            if n.id == id {
+                n.emoji = emoji.clone();
+            }
+        }
+        self.write_manifest(&manifest)?;
+        Ok(NotebookMeta {
+            emoji,
+            ..meta
+        })
+    }
+
     fn find(&self, manifest: &Manifest, id: &str) -> std::io::Result<NotebookMeta> {
         manifest
             .notebooks
@@ -136,7 +173,12 @@ impl Store {
         Ok(self.read_manifest()?.notebooks)
     }
 
-    pub fn create_notebook(&self, name: &str, cover: &str) -> std::io::Result<NotebookMeta> {
+    pub fn create_notebook(
+        &self,
+        name: &str,
+        cover: &str,
+        emoji: Option<&str>,
+    ) -> std::io::Result<NotebookMeta> {
         let name = sanitize_name(name);
         if name.is_empty() {
             return Err(std::io::Error::new(
@@ -166,6 +208,7 @@ impl Store {
             id: id.clone(),
             name,
             cover: cover.to_string(),
+            emoji: valid_emoji(emoji),
         };
         fs::create_dir_all(self.entries_dir(&id))?;
         manifest.notebooks.push(meta.clone());
@@ -438,7 +481,7 @@ mod tests {
     #[test]
     fn create_rename_cover_notebook() {
         let (_tmp, store) = store();
-        let meta = store.create_notebook("Travel 2025", "forest").unwrap();
+        let meta = store.create_notebook("Travel 2025", "forest", None).unwrap();
         assert_ne!(meta.id, "default");
         assert!(meta.id.starts_with("nb-"));
         assert_eq!(meta.name, "Travel 2025");
@@ -462,10 +505,46 @@ mod tests {
     }
 
     #[test]
+    fn emoji_sticker_roundtrip() {
+        let (_tmp, store) = store();
+        let meta = store
+            .create_notebook("Garden", "forest", Some("\u{1F341}"))
+            .unwrap();
+        assert_eq!(meta.emoji.as_deref(), Some("\u{1F341}"));
+
+        let changed = store.set_notebook_emoji(&meta.id, Some("\u{1F98A}")).unwrap();
+        assert_eq!(changed.emoji.as_deref(), Some("\u{1F98A}"));
+
+        let cleared = store.set_notebook_emoji(&meta.id, None).unwrap();
+        assert!(cleared.emoji.is_none());
+
+        // invalid emoji values are dropped, not stored
+        let long = "x".repeat(20);
+        let bad = store.create_notebook("Bad", "kraft", Some(&long)).unwrap();
+        assert!(bad.emoji.is_none());
+    }
+
+    #[test]
+    fn manifest_without_emoji_field_still_loads() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let root = tmp.path().join("journal");
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(
+            root.join("notebooks.json"),
+            r#"{"notebooks":[{"id":"default","name":"Old","cover":"kraft"}]}"#,
+        )
+        .unwrap();
+        let store = Store::new(root);
+        let books = store.list_notebooks().unwrap();
+        assert_eq!(books.len(), 1);
+        assert!(books[0].emoji.is_none());
+    }
+
+    #[test]
     fn create_rejects_empty_and_bad_cover() {
         let (_tmp, store) = store();
-        assert!(store.create_notebook("   ", "kraft").is_err());
-        assert!(store.create_notebook("ok", "../evil").is_err());
+        assert!(store.create_notebook("   ", "kraft", None).is_err());
+        assert!(store.create_notebook("ok", "../evil", None).is_err());
     }
 
     #[test]
@@ -498,7 +577,7 @@ mod tests {
         );
         assert_eq!(store.read_entry("default", &date(2024, 1, 1)).unwrap(), None);
 
-        let nb = store.create_notebook("Personal", "rose").unwrap();
+        let nb = store.create_notebook("Personal", "rose", None).unwrap();
         assert_eq!(store.read_entry(&nb.id, &d).unwrap(), None);
         store.save_entry(&nb.id, &d, "personal note").unwrap();
         assert_eq!(
@@ -517,7 +596,7 @@ mod tests {
     #[test]
     fn media_is_notebook_scoped() {
         let (_tmp, store) = store();
-        let nb = store.create_notebook("Photos", "meadow").unwrap();
+        let nb = store.create_notebook("Photos", "meadow", None).unwrap();
         let a = store
             .store_media("default", b"\x89PNG\r\n\x1a\nxx", Some("png"))
             .unwrap();

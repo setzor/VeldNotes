@@ -14,6 +14,7 @@ export interface NotebookMeta {
   id: string;
   name: string;
   cover: string;
+  emoji?: string | null;
 }
 
 export interface MediaPayload {
@@ -36,8 +37,16 @@ export function listNotebooks(): Promise<NotebookMeta[]> {
 export function createNotebook(
   name: string,
   cover: string,
+  emoji?: string | null,
 ): Promise<NotebookMeta> {
-  return invoke<NotebookMeta>("create_notebook", { name, cover });
+  return invoke<NotebookMeta>("create_notebook", { name, cover, emoji: emoji ?? null });
+}
+
+export function setNotebookEmoji(
+  id: string,
+  emoji: string | null,
+): Promise<NotebookMeta> {
+  return invoke<NotebookMeta>("set_notebook_emoji", { id, emoji });
 }
 
 export function renameNotebook(

@@ -74,9 +74,23 @@ pub fn create_notebook(
     state: State<'_, AppState>,
     name: String,
     cover: String,
+    emoji: Option<String>,
 ) -> Result<NotebookMeta, String> {
     with_store(&state, |s| {
-        s.create_notebook(&name, &cover).map_err(|e| e.to_string())
+        s.create_notebook(&name, &cover, emoji.as_deref())
+            .map_err(|e| e.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn set_notebook_emoji(
+    state: State<'_, AppState>,
+    id: String,
+    emoji: Option<String>,
+) -> Result<NotebookMeta, String> {
+    with_store(&state, |s| {
+        s.set_notebook_emoji(&id, emoji.as_deref())
+            .map_err(|e| e.to_string())
     })
 }
 

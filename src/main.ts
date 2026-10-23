@@ -36,6 +36,7 @@ import {
 } from "./theme";
 import {
   coverColors,
+  COVER_EMOJIS,
   fetchNotebooks,
   loadLastNotebook,
   renderCoverChoices,
@@ -85,6 +86,8 @@ const shelfGridEl = document.querySelector<HTMLDivElement>("#shelf-grid")!;
 const shelfFormEl = document.querySelector<HTMLFormElement>("#shelf-form")!;
 const shelfNameEl = document.querySelector<HTMLInputElement>("#shelf-name")!;
 const shelfCoversEl = document.querySelector<HTMLDivElement>("#shelf-covers")!;
+const shelfEmojisEl = document.querySelector<HTMLDivElement>("#shelf-emojis")!;
+const coverEmojiEl = document.querySelector<HTMLSpanElement>("#cover-emoji")!;
 
 function refreshDeleteButton(): void {
   deleteBtnEl.hidden = !editor || editor.getText().trim() === "";
@@ -110,6 +113,8 @@ function renderCover(): void {
   const [a, b] = coverColors(nb?.cover ?? "kraft");
   coverEl.style.setProperty("--cover-a", a);
   coverEl.style.setProperty("--cover-b", b);
+  coverEmojiEl.textContent = nb?.emoji ?? "";
+  coverEmojiEl.hidden = !nb?.emoji;
   coverBrandEl.textContent = nb?.name ?? "My Journal";
   const count = datesWithEntries.size;
   coverStatsEl.textContent =
@@ -273,7 +278,7 @@ shelfFormEl.addEventListener("submit", (event) => {
   event.preventDefault();
   const name = shelfNameEl.value.trim();
   if (!name) return;
-  void createNotebook(name, newNotebookCover).then(async (meta) => {
+  void createNotebook(name, newNotebookCover, newNotebookEmoji).then(async (meta) => {
     notebooks = await fetchNotebooks();
     shelfNameEl.value = "";
     renderShelfPopover();
@@ -283,6 +288,34 @@ shelfFormEl.addEventListener("submit", (event) => {
 });
 
 newNotebookCover = renderCoverChoices(shelfCoversEl);
+
+let newNotebookEmoji: string | null = null;
+{
+  const none = document.createElement("button");
+  none.type = "button";
+  none.className = "emoji-none";
+  none.title = "No emoji";
+  none.textContent = "\u00d7";
+  none.addEventListener("click", () => {
+    newNotebookEmoji = null;
+    shelfEmojisEl.querySelectorAll("button").forEach((b) => b.classList.remove("active"));
+    none.classList.add("active");
+  });
+  shelfEmojisEl.appendChild(none);
+  for (const em of COVER_EMOJIS) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "emoji-pick";
+    b.title = "sticker";
+    b.textContent = em;
+    b.addEventListener("click", () => {
+      newNotebookEmoji = em;
+      shelfEmojisEl.querySelectorAll("button").forEach((x) => x.classList.remove("active"));
+      b.classList.add("active");
+    });
+    shelfEmojisEl.appendChild(b);
+  }
+}
 
 /* --- theme popover --------------------------------------------------------- */
 
