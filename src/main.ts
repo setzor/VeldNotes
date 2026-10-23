@@ -214,6 +214,7 @@ async function switchNotebook(id: string): Promise<void> {
   currentDate = "";
   await refreshEntries();
   renderCover();
+  renderCoverSubtitle();
   setViewedMonth(monthKey(todayStr));
   await openDate(todayStr);
 }
@@ -225,9 +226,23 @@ coverEl.addEventListener("click", () => {
 
 /* --- editable cover text --------------------------------------------------- */
 
-const COVER_SUB_KEY = "veldnotes.cover.subtitle";
-coverSubEl.textContent =
-  localStorage.getItem(COVER_SUB_KEY) || "a cozy daily journal";
+const COVER_SUB_KEY_PREFIX = "veldnotes.cover.subtitle.";
+const DEFAULT_SUBTITLE = "a cozy daily journal";
+
+function subtitleKey(notebookId: string): string {
+  return COVER_SUB_KEY_PREFIX + notebookId;
+}
+
+function loadSubtitleFor(notebookId: string | undefined): string {
+  if (!notebookId) return DEFAULT_SUBTITLE;
+  return localStorage.getItem(subtitleKey(notebookId)) || DEFAULT_SUBTITLE;
+}
+
+function renderCoverSubtitle(): void {
+  coverSubEl.textContent = loadSubtitleFor(activeNotebookId);
+}
+
+renderCoverSubtitle();
 
 for (const el of [coverBrandEl, coverSubEl]) {
   el.addEventListener("click", (event) => event.stopPropagation());
@@ -255,7 +270,10 @@ coverBrandEl.addEventListener("blur", () => {
 });
 
 coverSubEl.addEventListener("blur", () => {
-  localStorage.setItem(COVER_SUB_KEY, (coverSubEl.textContent ?? "").trim());
+  const value = (coverSubEl.textContent ?? "").trim();
+  if (activeNotebookId) {
+    localStorage.setItem(subtitleKey(activeNotebookId), value);
+  }
 });
 
 document.addEventListener("click", (event) => {
