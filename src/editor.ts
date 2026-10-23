@@ -30,6 +30,20 @@ const LocalMediaImage = Image.extend({
         parseHTML: (el) => el.getAttribute("src"),
         renderHTML: (attrs) => ({ src: attrs.src as string }),
       },
+      width: {
+        default: null,
+        parseHTML: (el) => {
+          const raw = (el as HTMLElement).getAttribute("width");
+          if (raw && /^\d+$/.test(raw)) return Number(raw);
+          const style = (el as HTMLElement).getAttribute("style") ?? "";
+          const m = style.match(/width:\s*(\d+)px/);
+          return m ? Number(m[1]) : null;
+        },
+        renderHTML: (attrs) => {
+          const w = attrs.width as number | null;
+          return w ? { style: `width: ${w}px` } : {};
+        },
+      },
     };
   },
 
@@ -61,7 +75,7 @@ const LocalMediaImage = Image.extend({
   },
 
   addNodeView() {
-    return ({ node }) => {
+    return ({ node, editor: ed, getPos }) => {
       const img = document.createElement("img");
       const src = node.attrs.src as string;
       if (src.startsWith("../media/")) {
@@ -77,10 +91,69 @@ const LocalMediaImage = Image.extend({
         img.src = src;
       }
       if (node.attrs.alt) img.alt = node.attrs.alt as string;
+      const w = node.attrs.width as number | null;
+      if (w) img.style.width = `${w}px`;
+
       const dom = document.createElement("div");
       dom.className = "entry-image";
       dom.appendChild(img);
-      return { dom };
+
+      const MIN_W = 40;
+      const commit = (px: number): void => {
+        const pos = typeof getPos === "function" ? getPos() : null;
+        if (pos === null) return;
+        ed.view.dispatch(
+          ed.view.state.tr.setNodeMarkup(pos, undefined, {
+            ...node.attrs,
+            width: px,
+          }),
+        );
+      };
+
+      const startDrag = (event: MouseEvent): void => {
+        event.preventDefault();
+        event.stopPropagation();
+        const startX = event.clientX;
+        const startWidth = img.getBoundingClientRect().width;
+        const containerW =
+          dom.parentElement?.getBoundingClientRect().width ?? startWidth;
+        const onMove = (ev: MouseEvent): void => {
+          let next = startWidth + (ev.clientX - startX);
+          next = Math.max(MIN_W, Math.min(next, containerW));
+          apply(Math.round(next));
+        };
+        const onUp = (): void => {
+          document.removeEventListener("mousemove", onMove);
+          document.removeEventListener("mouseup", onUp);
+          commit(Math.round(img.getBoundingClientRect().width));
+        };
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
+      };
+
+      const apply = (px: number): void => {
+        img.style.width = `${px}px`;
+      };
+
+      const corner = document.createElement("div");
+      corner.className = "img-resize-handle corner";
+      corner.addEventListener("mousedown", startDrag);
+      const edge = document.createElement("div");
+      edge.className = "img-resize-handle edge";
+      edge.addEventListener("mousedown", startDrag);
+      dom.append(corner, edge);
+
+      return {
+        dom,
+        update(updated) {
+          if (updated.type.name !== "image") return false;
+          node = updated;
+          const nw = updated.attrs.width as number | null;
+          if (nw) img.style.width = `${nw}px`;
+          else img.style.width = "";
+          return true;
+        },
+      };
     };
   },
 });

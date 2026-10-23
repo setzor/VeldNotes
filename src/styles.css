@@ -1129,6 +1129,44 @@ button {
   box-shadow: var(--shadow);
 }
 
+.entry-image {
+  position: relative;
+  display: inline-block;
+}
+
+.entry-image .img-resize-handle {
+  position: absolute;
+  z-index: 5;
+  display: none;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  border: 1px solid var(--paper);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.entry-image:hover .img-resize-handle,
+.entry-image .img-resize-handle.dragging {
+  display: block;
+}
+
+.entry-image .img-resize-handle.corner {
+  right: -6px;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  cursor: nwse-resize;
+}
+
+.entry-image .img-resize-handle.edge {
+  top: 0;
+  bottom: 0;
+  right: -6px;
+  width: 7px;
+  height: auto;
+  border-radius: 3px;
+  cursor: ew-resize;
+}
+
 .entry-editor .ProseMirror-selectednode img {
   outline: 2px solid var(--accent-soft);
   outline-offset: 2px;

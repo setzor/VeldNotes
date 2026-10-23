@@ -105,3 +105,38 @@ describe("markdown tables", () => {
     expect(out).toContain("| y |");
   });
 });
+
+describe("image width persistence", () => {
+  it("round-trips resized image as alt|width syntax", () => {
+    const doc = {
+      type: "doc",
+      content: [
+        {
+          type: "image",
+          attrs: { src: "../media/abc.png", alt: "image", title: null, width: 320 },
+        },
+      ],
+    };
+    const out = tiptapDocToMarkdown(doc);
+    expect(out).toContain("![image|320](../media/abc.png)");
+    const back = tiptapContentFromMarkdown(out);
+    const para = back?.content?.[0];
+    const imgNode = (para?.content?.[0] ?? para) as
+      | { attrs?: Record<string, unknown> }
+      | undefined;
+    expect(imgNode?.attrs?.width).toBe(320);
+    expect(imgNode?.attrs?.alt).toBe("image");
+  });
+
+  it("keeps plain images unchanged", () => {
+    const md = "![pasted image](../media/abc.png)\n";
+    const doc = tiptapContentFromMarkdown(md);
+    const para = doc?.content?.[0];
+    const imgNode = (para?.content?.[0] ?? para) as
+      | { attrs?: Record<string, unknown> }
+      | undefined;
+    expect(imgNode?.attrs?.width).toBeNull();
+    const out = tiptapDocToMarkdown(doc);
+    expect(out).toBe("![pasted image](../media/abc.png)\n");
+  });
+});
