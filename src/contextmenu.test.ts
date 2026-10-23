@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => ({})) }));
 import { installContextMenu } from "./contextmenu";
 
-function contextmenuEvent(target: HTMLElement): MouseEvent {
+function contextmenuEvent(_target: HTMLElement): MouseEvent {
   return new MouseEvent("contextmenu", { bubbles: true, clientX: 100, clientY: 100 });
 }
 
