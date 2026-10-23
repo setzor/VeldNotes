@@ -3,6 +3,11 @@ import { saveMedia } from "./api";
 import { setActiveNotebook } from "./editor";
 import { setClipboardNotebook } from "./clipboard";
 
+interface NodeSelectionLike {
+  from: number;
+  to: number;
+}
+
 let currentNotebook = "default";
 
 export function setPasteNotebook(notebook: string): void {
@@ -50,26 +55,32 @@ export function installImagePaste(editor: Editor): void {
           void insertImageFile(editor, file, coordinates?.pos);
           return true;
         }
-        // In-editor drag of an existing block (image, canvas sketch): update
-        // its freeform coordinates to the drop point instead of reordering the
-        // document, so blocks can be repositioned freely on the sheet.
+        // In-editor drag of an existing block (image, canvas sketch):
+        // reposition it on the freeform sheet instead of letting the default
+        // drop logic copy/reinsert it. `view.dragging` holds the NodeSelection
+        // ProseMirror recorded at dragstart - view.state.selection is not
+        // updated for atom drags, which is why the old code never matched and
+        // the default handler duplicated the node.
         if (moved) {
-          const sel = view.state.selection;
-          const isNodeSel =
-            typeof sel === "object" &&
-            sel !== null &&
-            "node" in sel &&
-            (sel as { node?: unknown }).node != null;
-          if (isNodeSel) {
-            const draggedPos = sel.from as unknown as number;
-            const node = view.state.doc.nodeAt(draggedPos);
-            if (node && (node.type.name === "image" || node.type.name === "canvasBlock")) {
+          const dragging = (
+            view as unknown as {
+              dragging: { node: NodeSelectionLike } | null;
+            }
+          ).dragging;
+          const draggedSel = dragging?.node;
+          if (draggedSel) {
+            const pos = draggedSel.from;
+            const node = view.state.doc.nodeAt(pos);
+            if (
+              node &&
+              (node.type.name === "image" || node.type.name === "canvasBlock")
+            ) {
               const rect = view.dom.getBoundingClientRect();
               const x = Math.max(0, Math.round(event.clientX - rect.left));
               const y = Math.max(0, Math.round(event.clientY - rect.top));
               event.preventDefault();
               view.dispatch(
-                view.state.tr.setNodeMarkup(draggedPos, undefined, {
+                view.state.tr.setNodeMarkup(pos, undefined, {
                   ...node.attrs,
                   freeformPos: `${x},${y}`,
                 }),

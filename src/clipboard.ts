@@ -19,6 +19,13 @@ export function setClipboardNotebook(notebook: string): void {
   activeNotebook = notebook;
 }
 
+/**
+ * Write the image to the system clipboard with everything a consumer needs:
+ * the real image bytes (so other apps paste the picture) and a text/html
+ * payload carrying the local media reference (so pasting back into VeldNotes
+ * reconstructs the exact same image node). The media store dedupes by content
+ * hash, so re-inserting the same bytes reuses the stored file.
+ */
 async function writeImageToClipboard(reference: string): Promise<boolean> {
   if (typeof ClipboardItem === "undefined" || !navigator.clipboard?.write) {
     return false;
@@ -28,27 +35,42 @@ async function writeImageToClipboard(reference: string): Promise<boolean> {
     const bytes = new Uint8Array(data);
     const type = mime.startsWith("image/") ? mime : "image/png";
     const blob = new Blob([bytes], { type });
-    await navigator.clipboard.write([
-      new ClipboardItem({ [type]: blob }),
-    ]);
+    const html =
+      `<img src="${reference.replace(/"/g, "&quot;")}" alt="pasted image">`;
+    const htmlBlob = new Blob([html], { type: "text/html" });
+    const itemPayload: Record<string, Blob> = { [type]: blob };
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({ ...itemPayload, "text/html": htmlBlob }),
+      ]);
+    } catch {
+      // Some engines only accept image types in ClipboardItem.
+      await navigator.clipboard.write([
+        new ClipboardItem(itemPayload),
+      ]);
+    }
     return true;
   } catch {
     return false;
   }
 }
 
-/** Copy an image node to the system clipboard (real image bytes). */
+/**
+ * Copy an image node. The in-app (ProseMirror) copy runs synchronously within
+ * the user gesture first, so pasting back into a note always reconstructs a
+ * valid image node; the real image bytes are then written to the OS
+ * clipboard best-effort (some engines reject async clipboard writes once
+ * the gesture context is gone).
+ */
 export async function copyImage(
   editor: Editor | null,
   reference: string,
 ): Promise<void> {
-  const osOk = await writeImageToClipboard(reference);
-  if (osOk) return;
-  // Fallback: copy as editor node so at least in-app paste works.
   if (editor) {
-    selectNodeBySrc(editor, reference, false);
+    selectNodeBySrc(editor, reference, true);
     triggerCopy();
   }
+  await writeImageToClipboard(reference);
 }
 
 /** Cut an image node: copy real bytes, then remove the node from the doc. */

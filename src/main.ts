@@ -48,6 +48,7 @@ import { applyDefaultFontStack, fontStack } from "./fonts";
 import { installContextMenu, setEditorAccessor, setSidebarActions } from "./contextmenu";
 import { installNotebookSettings, openNotebookSettings } from "./notebooksettings";
 import { loadSubtitleFor, saveSubtitleFor } from "./subtitle";
+import type { JSONContent } from "@tiptap/core";
 
 let currentDate = "";
 let todayStr = "";
@@ -91,7 +92,27 @@ const shelfEmojisEl = document.querySelector<HTMLDivElement>("#shelf-emojis")!;
 const coverEmojiEl = document.querySelector<HTMLSpanElement>("#cover-emoji")!;
 
 function refreshDeleteButton(): void {
-  deleteBtnEl.hidden = !editor || editor.getText().trim() === "";
+  if (!editor) {
+    deleteBtnEl.hidden = true;
+    return;
+  }
+  // Content is more than text: days holding only images or canvas sketches
+  // must still show the delete button.
+  deleteBtnEl.hidden = !entryHasContent(editor.getJSON());
+}
+
+function entryHasContent(doc: JSONContent): boolean {
+  const blocks = doc.content;
+  if (!blocks?.length) return false;
+  return blocks.some((block) => {
+    if (block.type === "paragraph" || block.type === "heading") {
+      // any text, or an explicitly placed block on the freeform sheet
+      return (
+        !!block.content?.length || !!block.attrs?.freeformPos
+      );
+    }
+    return true;
+  });
 }
 
 function setSaveStatus(status: SaveStatus): void {
