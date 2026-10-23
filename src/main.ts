@@ -50,6 +50,7 @@ import {
   loadEditorFont,
   saveEditorFont,
 } from "./fonts";
+import { FONTSIZE_CHOICES, saveSettings } from "./settings";
 import { installContextMenu, setSidebarActions } from "./contextmenu";
 import { installNotebookSettings, openNotebookSettings } from "./notebooksettings";
 import { loadSubtitleFor, saveSubtitleFor } from "./subtitle";
@@ -439,6 +440,20 @@ window.addEventListener("veldnotes:set-font", (event) => {
   applyEditorFont(activeNotebookId);
 });
 
+function syncFontsizeSelect(): void {
+  const select = document.querySelector<HTMLSelectElement>("#fontsize-select");
+  if (select) select.value = String(appSettings.editorFontSize);
+}
+
+window.addEventListener("veldnotes:set-fontsize", (event) => {
+  const size = (event as CustomEvent<{ size: number }>).detail.size;
+  const valid = FONTSIZE_CHOICES.some((c) => c.value === size);
+  if (!valid) return;
+  appSettings = { ...appSettings, editorFontSize: size };
+  saveSettings(appSettings);
+  applyEditorFontSize();
+});
+
 window.addEventListener("veldnotes:delete-image", (event) => {
   const src = (event as CustomEvent<{ src: string }>).detail.src;
   if (!editor || !src) return;
@@ -559,6 +574,7 @@ async function boot(): Promise<void> {
   setToolbarNotebook(activeNotebookId);
   applyEditorFont(activeNotebookId);
   syncFontSelect();
+  syncFontsizeSelect();
   await refreshEntries();
   renderCover();
   renderWeekdays();

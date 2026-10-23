@@ -113,6 +113,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-mode="light"]) {
+    color-scheme: dark;
     --paper: #23201a;
     --paper-deep: #1c1915;
     --ink: #e6ddc9;
@@ -213,6 +214,7 @@
 /* --- explicit dark mode --------------------------------------------------- */
 
 :root[data-mode="dark"] {
+  color-scheme: dark;
   --paper: #23201a;
   --paper-deep: #1c1915;
   --ink: #e6ddc9;
@@ -310,6 +312,7 @@
 }
 
 :root {
+  color-scheme: light;
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia,
     "Times New Roman", serif;
   --sans: "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -1789,25 +1792,34 @@ button {
 
 /* --- toolbar font dropdown --------------------------------------------------- */
 
-#font-select {
+#font-select,
+#fontsize-select {
   height: 28px;
-  margin-left: auto;
   padding: 0 8px;
   border: 1px solid var(--line);
   border-radius: 7px;
-  background: var(--paper);
+  background: color-mix(in srgb, var(--card) 62%, transparent);
   color: var(--ink-soft);
   font-family: var(--sans);
   font-size: 11.5px;
   cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
-#font-select:hover {
+#font-select {
+  margin-left: auto;
+}
+
+#font-select:hover,
+#fontsize-select:hover {
   color: var(--ink);
   border-color: var(--accent-soft);
+  background: color-mix(in srgb, var(--card) 80%, transparent);
 }
 
-#font-select:focus {
+#font-select:focus,
+#fontsize-select:focus {
   outline: none;
   border-color: var(--accent-soft);
 }
