@@ -784,13 +784,21 @@ button {
   gap: 4px;
   margin: 0 0 12px;
   padding: 6px;
-  background: var(--card);
+  background: color-mix(in srgb, var(--card) 72%, transparent);
   border: 1px solid var(--line);
   border-radius: 12px;
   box-shadow: var(--shadow);
   position: sticky;
-  top: 8px;
+  top: 0;
   z-index: 10;
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  #toolbar {
+    background: var(--card);
+  }
 }
 
 .tool-btn {
