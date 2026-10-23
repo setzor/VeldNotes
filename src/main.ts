@@ -44,7 +44,8 @@ import {
   saveLastNotebook,
 } from "./shelf";
 import { createToolbar, setToolbarNotebook } from "./toolbar";
-import { installContextMenu } from "./contextmenu";
+import { installContextMenu, setSidebarActions } from "./contextmenu";
+import { installNotebookSettings, openNotebookSettings } from "./notebooksettings";
 
 let currentDate = "";
 let todayStr = "";
@@ -388,6 +389,51 @@ watchSystemMode(() => {
 /* --- frosted custom context menu --------------------------------------------- */
 
 installContextMenu();
+
+setSidebarActions({
+  openNotebookSettings: () => {
+    const nb = activeNotebook();
+    if (nb) openNotebookSettings(nb);
+  },
+  newNotebook: () => {
+    renderShelfPopover();
+    shelfPopEl.hidden = false;
+    shelfNameEl.focus();
+  },
+  previousMonth: () => setViewedMonth(addMonths(viewedMonth, -1)),
+  nextMonth: () => setViewedMonth(addMonths(viewedMonth, 1)),
+  goToday: () => {
+    setViewedMonth(monthKey(todayStr));
+    void openDate(todayStr);
+  },
+});
+
+installNotebookSettings({
+  onSaved: (meta) => {
+    const nb = notebooks.find((n) => n.id === meta.id);
+    if (nb) {
+      nb.name = meta.name;
+      nb.cover = meta.cover;
+      nb.emoji = meta.emoji ?? null;
+    }
+    if (meta.id === activeNotebookId) renderCover();
+    renderShelfPopover();
+  },
+});
+
+window.addEventListener("veldnotes:edit-notebook", (event) => {
+  const id = (event as CustomEvent<{ id: string }>).detail.id;
+  const nb = notebooks.find((n) => n.id === id);
+  if (nb) {
+    shelfPopEl.hidden = true;
+    openNotebookSettings(nb);
+  }
+});
+
+window.addEventListener("veldnotes:open-shelf", () => {
+  renderShelfPopover();
+  shelfPopEl.hidden = false;
+});
 
 /* --- delete day's note with confirmation ------------------------------------ */
 

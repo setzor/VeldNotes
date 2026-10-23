@@ -1,7 +1,10 @@
+import type { NotebookMeta } from "./api";
+
 interface MenuEntry {
   label: string;
   run: () => void;
   disabled?: boolean;
+  danger?: boolean;
 }
 
 function hasSelection(): boolean {
@@ -13,6 +16,20 @@ function editableTarget(target: HTMLElement): HTMLElement | null {
   return target.closest(
     "input, textarea, [contenteditable]:not([contenteditable='false']), .entry-editor",
   );
+}
+
+export interface SidebarActions {
+  openNotebookSettings: () => void;
+  newNotebook: () => void;
+  previousMonth: () => void;
+  nextMonth: () => void;
+  goToday: () => void;
+}
+
+let sidebarActions: SidebarActions | null = null;
+
+export function setSidebarActions(actions: SidebarActions): void {
+  sidebarActions = actions;
 }
 
 function buildEntries(target: HTMLElement): MenuEntry[] {
@@ -66,6 +83,58 @@ function buildEntries(target: HTMLElement): MenuEntry[] {
     return entries;
   }
 
+  // --- sidebar contexts -------------------------------------------------------
+
+  const onCalendar = !!target.closest("#calendar");
+  const onCover = !!target.closest("#cover");
+  const onShelfItem = target.closest<HTMLElement>(".shelf-item");
+  const inShelf = !!target.closest("#shelf-popover");
+
+  if (inShelf && onShelfItem && sidebarActions) {
+    entries.push({
+      label: "Notebook settings…",
+      run: () => {
+        window.dispatchEvent(
+          new CustomEvent("veldnotes:edit-notebook", {
+            detail: { id: onShelfItem.dataset.id },
+          }),
+        );
+      },
+    });
+    return entries;
+  }
+
+  if ((onCover || onCalendar) && sidebarActions) {
+    if (onCover) {
+      entries.push({
+        label: "Notebook settings…",
+        run: sidebarActions.openNotebookSettings,
+      });
+      entries.push({
+        label: "Switch notebook…",
+        run: () => {
+          window.dispatchEvent(new CustomEvent("veldnotes:open-shelf"));
+        },
+      });
+    }
+    if (onCalendar) {
+      entries.push(
+        { label: "Previous month", run: sidebarActions.previousMonth },
+        { label: "Next month", run: sidebarActions.nextMonth },
+        { label: "Jump to today", run: sidebarActions.goToday },
+      );
+    }
+    entries.push({
+      label: "New notebook…",
+      run: sidebarActions.newNotebook,
+    });
+    return entries;
+  }
+
+  if (target.closest("#theme-popover, #theme-btn")) {
+    return entries;
+  }
+
   entries.push({
     label: "Copy",
     run: () => void document.execCommand("copy"),
@@ -100,7 +169,10 @@ export function installContextMenu(): void {
     for (const entry of entries) {
       const item = document.createElement("button");
       item.type = "button";
-      item.className = "ctx-item" + (entry.disabled ? " disabled" : "");
+      item.className =
+        "ctx-item" +
+        (entry.disabled ? " disabled" : "") +
+        (entry.danger ? " danger" : "");
       item.textContent = entry.label;
       item.disabled = entry.disabled === true;
       item.addEventListener("click", () => {
@@ -134,3 +206,5 @@ export function installContextMenu(): void {
     }
   });
 }
+
+export type { NotebookMeta };
