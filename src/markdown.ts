@@ -5,7 +5,7 @@ import TokenCtor from "markdown-it/lib/token.mjs";
 import { getSchema } from "@tiptap/core";
 import type { JSONContent } from "@tiptap/core";
 import { StarterKit } from "@tiptap/starter-kit";
-import { Image } from "@tiptap/extension-image";
+import { Image as BaseImage } from "@tiptap/extension-image";
 import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
@@ -21,9 +21,31 @@ import type { ParseSpec } from "prosemirror-markdown";
 
 marked.setOptions({ gfm: true, breaks: false });
 
+const WidthImage = BaseImage.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      width: {
+        default: null,
+        parseHTML: (el) => {
+          const raw = (el as HTMLElement).getAttribute("width");
+          if (raw && /^\d+$/.test(raw)) return Number(raw);
+          const style = (el as HTMLElement).getAttribute("style") ?? "";
+          const m = style.match(/width:\s*(\d+)px/);
+          return m ? Number(m[1]) : null;
+        },
+        renderHTML: (attrs) => {
+          const w = attrs.width as number | null;
+          return w ? { style: `width: ${w}px` } : {};
+        },
+      },
+    };
+  },
+});
+
 const extensions = [
   StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
-  Image.configure({ inline: true }),
+  WidthImage.configure({ inline: true }),
   Table.configure({ resizable: true }),
   TableRow,
   TableCell,
@@ -105,11 +127,23 @@ const tokens: { [name: string]: ParseSpec } = {
   hr: { node: "horizontalRule" },
   image: {
     node: "image",
-    getAttrs: (tok) => ({
-      src: tok.attrGet("src"),
-      title: tok.attrGet("title") || null,
-      alt: tok.children?.[0]?.content || null,
-    }),
+    getAttrs: (tok) => {
+      let alt: string | null = tok.children?.[0]?.content ?? null;
+      let width: number | null = null;
+      if (alt) {
+        const m = alt.match(/^(.*)\|(\d+)$/);
+        if (m) {
+          alt = m[1] || null;
+          width = Number(m[2]);
+        }
+      }
+      return {
+        src: tok.attrGet("src"),
+        title: tok.attrGet("title") || null,
+        alt,
+        width,
+      };
+    },
   },
   hardbreak: { node: "hardBreak" },
   table: { block: "table" },
@@ -236,7 +270,9 @@ const nodes: Record<string, NodeSerializer> = {
   tableCell() {},
   image(state, node) {
     const src = (node.attrs.src as string).replace(/[()]/g, "\\$&");
-    const alt = state.esc((node.attrs.alt as string) || "");
+    let alt = state.esc((node.attrs.alt as string) || "");
+    const width = node.attrs.width as number | null;
+    if (width) alt = `${alt}|${width}`;
     const title = node.attrs.title as string | null;
     state.write(
       `![${alt}](${src}` +
