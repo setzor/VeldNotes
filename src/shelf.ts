@@ -3,6 +3,7 @@ import {
   listNotebooks,
   renameNotebook,
   setNotebookCover,
+  setNotebookEmoji,
   type NotebookMeta,
 } from "./api";
 
@@ -18,6 +19,40 @@ export const COVER_STYLES = [
 ] as const;
 
 export type CoverId = (typeof COVER_STYLES)[number]["id"];
+
+/** Curated sticker emojis offered for notebook covers. */
+export const COVER_EMOJIS = [
+  "\u{1F342}", // fallen leaf
+  "\u{1F33F}", // herb
+  "\u{1F343}", // leaf fluttering in wind
+  "\u{1F41C}", // bug
+  "\u{1F426}", // bird
+  "\u{1F98A}", // fox
+  "\u{1F43C}", // panda
+  "\u{1F42F}", // tiger
+  "\u{1F308}", // rainbow
+  "\u{2B50}",  // star
+  "\u{1F31F}", // glowing star
+  "\u{1F4AB}", // dizzy
+  "\u{1F31E}", // sun with face
+  "\u{1F319}", // crescent moon
+  "\u{2600}\u{FE0F}",  // sunny
+  "\u{26C4}",  // snowman
+  "\u{1F341}", // maple leaf
+  "\u{1F353}", // strawberry
+  "\u{1F347}", // grapes
+  "\u{1F34C}", // banana
+  "\u{2615}",  // coffee
+  "\u{1F37C}", // milk glass? beer mug
+  "\u{1F4DA}", // books
+  "\u{1F58D}\u{FE0F}", // crayon
+  "\u{270D}\u{FE0F}",  // writing hand
+  "\u{1F3AF}", // dart
+  "\u{1F6F6}", // canoe
+  "\u{1F680}", // rocket
+  "\u{1FA91}", // chair
+  "\u{1F9ED}", // compass
+] as const;
 
 export function coverColors(cover: string): readonly [string, string] {
   const found = COVER_STYLES.find((c) => c.id === cover);
@@ -71,6 +106,12 @@ export function renderShelf(
     const spine = document.createElement("div");
     spine.className = "shelf-cover-spine";
     swatch.prepend(spine);
+    if (nb.emoji) {
+      const sticker = document.createElement("span");
+      sticker.className = "shelf-cover-emoji";
+      sticker.textContent = nb.emoji;
+      swatch.appendChild(sticker);
+    }
     const name = document.createElement("span");
     name.className = "shelf-name";
     name.textContent = nb.name;
@@ -129,6 +170,47 @@ export function renderShelf(
       coverPick.appendChild(b);
     }
     item.appendChild(coverPick);
+
+    // emoji sticker picker (plus a "none" option)
+    const emojiPick = document.createElement("div");
+    emojiPick.className = "shelf-emoji-pick";
+    const none = document.createElement("button");
+    none.type = "button";
+    none.className = "emoji-none";
+    none.title = "No emoji";
+    none.textContent = "\u00d7";
+    none.addEventListener("click", (event) => {
+      event.stopPropagation();
+      void setNotebookEmoji(nb.id, null).then((meta) => {
+        nb.emoji = null;
+        swatch.querySelector(".shelf-cover-emoji")?.remove();
+        callbacks.onMetaChange?.(meta);
+      });
+    });
+    emojiPick.appendChild(none);
+    for (const em of COVER_EMOJIS) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "emoji-pick";
+      b.title = "sticker";
+      b.textContent = em;
+      b.addEventListener("click", (event) => {
+        event.stopPropagation();
+        void setNotebookEmoji(nb.id, em).then((meta) => {
+          nb.emoji = meta.emoji ?? null;
+          swatch.querySelector(".shelf-cover-emoji")?.remove();
+          if (nb.emoji) {
+            const sticker = document.createElement("span");
+            sticker.className = "shelf-cover-emoji";
+            sticker.textContent = nb.emoji;
+            swatch.appendChild(sticker);
+          }
+          callbacks.onMetaChange?.(meta);
+        });
+      });
+      emojiPick.appendChild(b);
+    }
+    item.appendChild(emojiPick);
 
     grid.appendChild(item);
   }

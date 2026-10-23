@@ -21,6 +21,7 @@ pub fn run() {
             commands::create_notebook,
             commands::rename_notebook,
             commands::set_notebook_cover,
+            commands::set_notebook_emoji,
             commands::get_entry,
             commands::save_entry,
             commands::delete_entry,
