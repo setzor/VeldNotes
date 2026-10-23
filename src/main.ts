@@ -86,6 +86,10 @@ const shelfFormEl = document.querySelector<HTMLFormElement>("#shelf-form")!;
 const shelfNameEl = document.querySelector<HTMLInputElement>("#shelf-name")!;
 const shelfCoversEl = document.querySelector<HTMLDivElement>("#shelf-covers")!;
 
+function refreshDeleteButton(): void {
+  deleteBtnEl.hidden = !editor || editor.getText().trim() === "";
+}
+
 function setSaveStatus(status: SaveStatus): void {
   const labels: Record<SaveStatus, string> = {
     idle: "",
@@ -159,7 +163,10 @@ async function openDate(date: string): Promise<void> {
   entryDateEl.textContent = formatLong(payload.date);
   editor?.destroy();
   editor = createEditor(editorHostEl, payload.content, {
-    onUpdate: (markdown) => autosave?.update(markdown),
+    onUpdate: (markdown) => {
+      autosave?.update(markdown);
+      refreshDeleteButton();
+    },
   });
   autosave = new Autosave(
     (content) => saveEntry(activeNotebookId, currentDate, content),
@@ -173,6 +180,7 @@ async function openDate(date: string): Promise<void> {
   } else {
     renderCalendar();
   }
+  refreshDeleteButton();
   editor?.commands.focus("end");
 }
 
