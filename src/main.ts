@@ -29,8 +29,6 @@ import {
   loadMode,
   loadThemeId,
   Mode,
-  saveTheme,
-  THEMES,
   ThemeId,
   watchSystemMode,
 } from "./theme";
@@ -44,6 +42,8 @@ import {
   saveLastNotebook,
 } from "./shelf";
 import { createToolbar, setToolbarNotebook } from "./toolbar";
+import { installAppSettings, openAppSettings, getAppSettings } from "./appsettings";
+import type { AppSettings } from "./settings";
 import { installContextMenu, setSidebarActions } from "./contextmenu";
 import { installNotebookSettings, openNotebookSettings } from "./notebooksettings";
 import { loadSubtitleFor, saveSubtitleFor } from "./subtitle";
@@ -56,7 +56,7 @@ let notebooks: NotebookMeta[] = [];
 let editor: Editor | null = null;
 let autosave: Autosave | null = null;
 let datesWithEntries = new Set<string>();
-const firstWeekday = localeFirstWeekday();
+let firstWeekday = localeFirstWeekday();
 
 const calGridEl = document.querySelector<HTMLDivElement>("#cal-grid")!;
 const calWeekdaysEl = document.querySelector<HTMLDivElement>("#cal-weekdays")!;
@@ -79,10 +79,7 @@ const confirmTitleEl = document.querySelector<HTMLDivElement>("#confirm-title")!
 const confirmBodyEl = document.querySelector<HTMLDivElement>("#confirm-body")!;
 const confirmOkEl = document.querySelector<HTMLButtonElement>("#confirm-ok")!;
 const confirmCancelEl = document.querySelector<HTMLButtonElement>("#confirm-cancel")!;
-const themeBtnEl = document.querySelector<HTMLButtonElement>("#theme-btn")!;
-const themePopEl = document.querySelector<HTMLDivElement>("#theme-popover")!;
-const themeChoicesEl = document.querySelector<HTMLDivElement>("#theme-choices")!;
-const modeChoicesEl = document.querySelector<HTMLDivElement>("#mode-choices")!;
+const settingsBtnEl = document.querySelector<HTMLButtonElement>("#settings-btn")!;
 const toolbarEl = document.querySelector<HTMLDivElement>("#toolbar")!;
 const shelfPopEl = document.querySelector<HTMLDivElement>("#shelf-popover")!;
 const shelfGridEl = document.querySelector<HTMLDivElement>("#shelf-grid")!;
@@ -179,6 +176,7 @@ async function openDate(date: string): Promise<void> {
   autosave = new Autosave(
     (content) => saveEntry(activeNotebookId, currentDate, content),
     setSaveStatus,
+    appSettings.autosaveDelayMs,
   );
   autosave.markLoaded(payload.content);
   setSaveStatus("idle");
@@ -273,13 +271,11 @@ coverSubEl.addEventListener("blur", () => {
 });
 
 document.addEventListener("click", (event) => {
-  for (const pop of [themePopEl, shelfPopEl]) {
-    if (pop.hidden) continue;
+  if (!shelfPopEl.hidden) {
     const target = event.target as HTMLElement;
-    if (pop.contains(target)) continue;
-    if (pop === themePopEl && themeBtnEl.contains(target)) continue;
-    if (pop === shelfPopEl && coverEl.contains(target)) continue;
-    pop.hidden = true;
+    if (!shelfPopEl.contains(target) && !coverEl.contains(target)) {
+      shelfPopEl.hidden = true;
+    }
   }
 });
 
@@ -326,49 +322,45 @@ let newNotebookEmoji: string | null = null;
   }
 }
 
-/* --- theme popover --------------------------------------------------------- */
+/* --- app settings --------------------------------------------------------- */
 
 let currentThemeId: ThemeId = loadThemeId();
 let currentMode: Mode = loadMode();
+let appSettings: AppSettings = getAppSettings();
 
-function renderThemePopover(): void {
-  themeChoicesEl.textContent = "";
-  for (const t of THEMES) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "theme-choice" + (t.id === currentThemeId ? " active" : "");
-    const swatch = document.createElement("span");
-    swatch.className = "theme-swatch";
-    swatch.style.background = `linear-gradient(135deg, ${t.swatch[0]} 50%, ${t.swatch[1]} 50%)`;
-    const label = document.createElement("span");
-    label.textContent = t.label;
-    btn.append(swatch, label);
-    btn.addEventListener("click", () => {
-      currentThemeId = t.id;
-      applyTheme(currentThemeId, currentMode);
-      saveTheme(currentThemeId, currentMode);
-      renderThemePopover();
-    });
-    themeChoicesEl.appendChild(btn);
-  }
-  for (const btn of Array.from(modeChoicesEl.querySelectorAll("button"))) {
-    btn.classList.toggle("active", btn.dataset.mode === currentMode);
-  }
+function refreshFirstWeekday(): void {
+  firstWeekday =
+    appSettings.firstWeekday === "locale"
+      ? localeFirstWeekday()
+      : appSettings.firstWeekday;
 }
 
-modeChoicesEl.addEventListener("click", (event) => {
-  const btn = (event.target as HTMLElement).closest<HTMLButtonElement>(
-    "button[data-mode]",
+function applyEditorFontSize(): void {
+  document.documentElement.style.setProperty(
+    "--editor-font-size",
+    `${appSettings.editorFontSize}px`,
   );
-  if (!btn) return;
-  currentMode = btn.dataset.mode as Mode;
-  applyTheme(currentThemeId, currentMode);
-  saveTheme(currentThemeId, currentMode);
-  renderThemePopover();
+}
+
+installAppSettings({
+  onSettingsChanged: (updated) => {
+    appSettings = updated;
+    applyEditorFontSize();
+    refreshFirstWeekday();
+    renderWeekdays();
+    renderCalendar();
+  },
+  onThemeChanged: (theme, mode) => {
+    currentThemeId = theme;
+    currentMode = mode;
+  },
 });
 
-themeBtnEl.addEventListener("click", () => {
-  themePopEl.hidden = !themePopEl.hidden;
+refreshFirstWeekday();
+applyEditorFontSize();
+
+settingsBtnEl.addEventListener("click", () => {
+  openAppSettings();
 });
 
 watchSystemMode(() => {
@@ -554,7 +546,6 @@ async function boot(): Promise<void> {
 
 window.addEventListener("DOMContentLoaded", () => {
   applyTheme(currentThemeId, currentMode);
-  renderThemePopover();
   createToolbar(toolbarEl, () => editor);
   void boot();
 });
