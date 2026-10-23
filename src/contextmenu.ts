@@ -40,6 +40,19 @@ function buildEntries(target: HTMLElement): MenuEntry[] {
 
   if (img) {
     entries.push({
+      label: "Cut image",
+      run: () => {
+        void navigator.clipboard
+          .writeText((img.querySelector("img")?.dataset.pendingSrc as string) ?? "")
+          .catch(() => {});
+        window.dispatchEvent(
+          new CustomEvent("veldnotes:delete-image", {
+            detail: { src: img.querySelector("img")?.dataset.pendingSrc ?? "" },
+          }),
+        );
+      },
+    });
+    entries.push({
       label: "Copy image",
       run: () => {
         void navigator.clipboard
@@ -175,7 +188,8 @@ export function installContextMenu(): void {
         (entry.danger ? " danger" : "");
       item.textContent = entry.label;
       item.disabled = entry.disabled === true;
-      item.addEventListener("click", () => {
+      item.addEventListener("click", (event) => {
+        event.stopPropagation();
         close();
         entry.run();
       });
