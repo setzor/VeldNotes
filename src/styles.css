@@ -1798,13 +1798,16 @@ button {
   padding: 0 8px;
   border: 1px solid var(--line);
   border-radius: 7px;
-  background: color-mix(in srgb, var(--card) 62%, transparent);
-  color: var(--ink-soft);
+  background:
+    linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--card) 78%, transparent),
+      color-mix(in srgb, var(--card) 55%, transparent)
+    );
+  color: var(--ink);
   font-family: var(--sans);
   font-size: 11.5px;
   cursor: pointer;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
 }
 
 #font-select {
@@ -1813,9 +1816,13 @@ button {
 
 #font-select:hover,
 #fontsize-select:hover {
-  color: var(--ink);
   border-color: var(--accent-soft);
-  background: color-mix(in srgb, var(--card) 80%, transparent);
+  background:
+    linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--card) 92%, transparent),
+      color-mix(in srgb, var(--card) 66%, transparent)
+    );
 }
 
 #font-select:focus,
