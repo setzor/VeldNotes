@@ -17,9 +17,8 @@ Grab the latest release from the [Releases](https://github.com/setzor/VeldNotes/
 
 VeldNotes is inspired by the calm minimalism of a pocket notebook: warm
 kraft-paper tones, grass-gold accents, a readable serif, generous whitespace.
-No streaks, no badges, no guilt. Your journal is a plain folder of Markdown
-files that you own — openable in any text editor, greppable, and back-up-able
-with `rsync`.
+No streaks, no badges, no guilt. Your journal is a plain folder of rich-text
+files that you own — plain JSON, greppable, and easy to back up.
 
 ## Tech stack
 
@@ -38,23 +37,27 @@ Everything lives in a single plain folder:
 ```
 <data-dir>/
 ├── entries/
-│   ├── 2024-01-05.md      ← one Markdown file per day, named YYYY-MM-DD.md
-│   ├── 2024-03-08.md
+│   ├── 2024-01-05.json    ← one rich-text document per day, named YYYY-MM-DD.json
+│   ├── 2024-03-08.json
 │   └── ...
 └── media/
     ├── <sha256>.png       ← pasted images, content-hash filenames (deduplicated)
     └── ...
 ```
 
-- **Entries** are plain Markdown — headings, bold/italic, lists, quotes, code,
-  images. Nothing proprietary.
+- **Entries** are rich-text documents (TipTap/ProseMirror JSON) — headings,
+  bold/italic/underline, highlights, colors, alignment, links, lists, quotes,
+  code, tables, images, and free-form canvas sketches. Expressive formatting
+  survives save/load round-trips losslessly, which Markdown could not
+  represent. Older Markdown entries (`YYYY-MM-DD.md`) are imported
+  automatically the first time they are opened.
 - **Media** pasted into an entry is written to `media/` under its SHA-256
   content hash, so identical images are stored once. The entry file references
-  it with a relative Markdown image: `![pasted image](../media/<sha256>.png)`.
+  it with a relative media reference: `../media/<sha256>.png`.
   Images are never base64-embedded.
 - **Data directory**: on Linux `~/.local/share/veldnotes/`, on Windows
   `%APPDATA%\com.veldnotes.app\` (resolved via Tauri's path APIs — no hardcoded
-  paths). You can point any Markdown viewer, `grep`, or `rsync` at this folder.
+  paths). You can point `grep` or any JSON tooling at this folder.
 
 ## Development
 
@@ -84,15 +87,16 @@ cd src-tauri && cargo test   # Rust core unit tests
 
 ```
 src-tauri/            Rust core (Tauri commands, storage, media)
-  src/entry.rs        date handling + entry file naming (YYYY-MM-DD.md)
+  src/entry.rs        date handling + entry file naming (YYYY-MM-DD.json)
   src/media.rs        SHA-256 hashing, extension sniffing, dedup filenames
   src/store.rs        filesystem layer: atomic entry writes, media store
   src/commands.rs     Tauri commands exposed to the frontend
   src/lib.rs          app wiring
 src/                  TypeScript frontend (thin UI layer)
   main.ts             boot: open today's entry, date strip
-  editor.ts           TipTap editor + local-media image node
-  markdown.ts         Markdown <-> ProseMirror parse/serialize
+  editor.ts           TipTap editor + expressive formatting + canvas block
+  legacyMarkdown.ts   one-time import of old Markdown entries
+  canvas.ts           free-form canvas editor overlay (Excalidraw, MIT)
   autosave.ts         debounced autosave with in-flight chaining
   paste.ts            image paste/drop -> Rust media store
   api.ts              typed wrappers around Tauri commands

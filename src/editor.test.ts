@@ -11,7 +11,6 @@ vi.mock("@tauri-apps/api/core", () => ({
 }));
 
 import { createEditor } from "./editor";
-import { reviveSavedContent, tiptapDocToMarkdown } from "./markdown";
 
 describe("editor flow", () => {
   it("boot empty, type, switch day, come back", async () => {
@@ -19,38 +18,74 @@ describe("editor flow", () => {
     document.body.appendChild(host);
     let saved: string[] = [];
     let editor = createEditor(host, "", {
-      onUpdate: (md) => saved.push(md),
+      onUpdate: (docJson) => saved.push(docJson),
     });
     editor.commands.insertContent("Today was a day");
-    const stored = saved[saved.length - 1] ?? tiptapDocToMarkdown(editor.getJSON());
-    expect(stored).toBe("Today was a day\n");
+    const stored = saved[saved.length - 1] ?? JSON.stringify(editor.getJSON());
+    const doc = JSON.parse(stored) as { type: string };
+    expect(doc.type).toBe("doc");
 
     editor.destroy();
     const editor2 = createEditor(host, stored, {
       onUpdate: () => {},
     });
     expect(editor2.getText()).toBe("Today was a day");
+    editor2.destroy();
+  });
+
+  it("keeps expressive formatting through a save/load round-trip", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const editor = createEditor(host, "", { onUpdate: () => {} });
+    editor.commands.insertContent("colorful words");
+    editor.chain().setTextSelection({ from: 1, to: 9 }).run();
+    editor.chain().toggleHighlight().run();
+    editor.chain().toggleUnderline().run();
+    const saved = JSON.stringify(editor.getJSON());
+    editor.destroy();
+
+    const editor2 = createEditor(host, saved, { onUpdate: () => {} });
+    expect(editor2.getHTML()).toContain("<mark");
+    expect(editor2.getHTML()).toContain("<u");
+    expect(editor2.isActive("highlight", { from: 1, to: 9 })).toBe(false);
+    editor2.chain().setTextSelection({ from: 1, to: 9 }).run();
+    expect(editor2.isActive("highlight")).toBe(true);
+    expect(editor2.isActive("underline")).toBe(true);
+    editor2.destroy();
+  });
+
+  it("keeps text alignment through a save/load round-trip", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const editor = createEditor(host, "", { onUpdate: () => {} });
+    editor.commands.insertContent("centered");
+    editor.chain().setTextAlign("center").run();
+    const saved = JSON.stringify(editor.getJSON());
+    editor.destroy();
+
+    const editor2 = createEditor(host, saved, { onUpdate: () => {} });
+    expect(editor2.getHTML()).toContain("text-align: center");
+    editor2.destroy();
   });
 
   it("revives entries saved as raw JSON by the old build", () => {
     const corrupted =
       '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Today was a day"}]}]}';
-    const revived = reviveSavedContent(corrupted);
-    expect(revived).not.toBe(corrupted);
     const host = document.createElement("div");
     const editor = createEditor(host, corrupted, { onUpdate: () => {} });
     expect(editor.getText()).toBe("Today was a day");
+    editor.destroy();
   });
 
-  it("treats regular markdown as markdown, never as HTML/JSON text", () => {
+  it("imports legacy markdown entries", () => {
     const md = "# Hello\n\nSome **bold** text.\n";
-    const revived = reviveSavedContent(md);
-    expect(revived).toBe(md);
     const host = document.createElement("div");
     const editor = createEditor(host, md, { onUpdate: () => {} });
     expect(editor.getText()).toContain("Hello");
     expect(editor.getText()).toContain("bold");
     expect(editor.getHTML()).toContain("<h1>");
+    expect(editor.getHTML()).toContain("<strong>");
+    editor.destroy();
   });
 });
 
@@ -60,7 +95,7 @@ describe("image rendering", () => {
     document.body.appendChild(host);
     const editor = createEditor(
       host,
-      "Before\n\n![pasted image](../media/abc123.png)\n\nAfter\n",
+      '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"image","attrs":{"src":"../media/abc123.png","alt":"pasted image"}}]}]}',
       { onUpdate: () => {} },
     );
     await new Promise((r) => setTimeout(r, 30));

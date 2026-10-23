@@ -51,7 +51,7 @@ import {
   saveEditorFont,
 } from "./fonts";
 import { FONTSIZE_CHOICES, saveSettings } from "./settings";
-import { installContextMenu, setSidebarActions } from "./contextmenu";
+import { installContextMenu, setEditorAccessor, setSidebarActions } from "./contextmenu";
 import { installNotebookSettings, openNotebookSettings } from "./notebooksettings";
 import { loadSubtitleFor, saveSubtitleFor } from "./subtitle";
 
@@ -175,8 +175,8 @@ async function openDate(date: string): Promise<void> {
   entryDateEl.textContent = formatLong(payload.date);
   editor?.destroy();
   editor = createEditor(editorHostEl, payload.content, {
-    onUpdate: (markdown) => {
-      autosave?.update(markdown);
+    onUpdate: (docJson) => {
+      autosave?.update(docJson);
       refreshDeleteButton();
     },
   });
@@ -379,6 +379,7 @@ watchSystemMode(() => {
 /* --- frosted custom context menu --------------------------------------------- */
 
 installContextMenu();
+setEditorAccessor(() => editor);
 
 setSidebarActions({
   openNotebookSettings: () => {

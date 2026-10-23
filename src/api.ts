@@ -18,7 +18,7 @@ export interface NotebookMeta {
 }
 
 export interface MediaPayload {
-  markdown: string;
+  reference: string;
   filename: string;
 }
 

@@ -5,6 +5,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Manager, State};
 
 use crate::entry;
+use crate::media;
 use crate::store::{NotebookMeta, Store};
 
 pub struct AppState {
@@ -25,7 +26,7 @@ pub struct EntryMeta {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct MediaPayload {
-    pub markdown: String,
+    pub reference: String,
     pub filename: String,
 }
 
@@ -192,15 +193,11 @@ pub fn save_media(
     ext: Option<String>,
 ) -> Result<MediaPayload, String> {
     with_store(&state, |s| {
-        let markdown = s
+        let filename = s
             .store_media(&notebook, &bytes, ext.as_deref())
             .map_err(|e| e.to_string())?;
-        let filename = markdown
-            .trim_start_matches("![pasted image](")
-            .trim_end_matches(')')
-            .trim_start_matches("../media/")
-            .to_string();
-        Ok(MediaPayload { markdown, filename })
+        let reference = media::media_relative_path(&filename);
+        Ok(MediaPayload { reference, filename })
     })
 }
 

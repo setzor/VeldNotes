@@ -41,8 +41,8 @@ pub fn media_filename(hash: &str, ext: &str) -> String {
     format!("{hash}.{ext}")
 }
 
-/// Path stored in the entry's Markdown, relative to the entry file in `entries/`.
-pub fn md_relative_path(filename: &str) -> String {
+/// Media reference stored in the entry document, relative to the entry file in `entries/`.
+pub fn media_relative_path(filename: &str) -> String {
     format!("../media/{filename}")
 }
 
@@ -95,7 +95,7 @@ mod tests {
     #[test]
     fn filename_and_relative_path() {
         assert_eq!(media_filename("abc123", "png"), "abc123.png");
-        assert_eq!(md_relative_path("abc123.png"), "../media/abc123.png");
+        assert_eq!(media_relative_path("abc123.png"), "../media/abc123.png");
     }
 }
 

@@ -273,8 +273,26 @@ impl Store {
             .join(entry::entry_filename(date)))
     }
 
-    /// Read an entry's Markdown. Returns an empty string when the entry does not
-    /// exist yet (create-on-first-write: no empty files are created).
+    fn legacy_entry_path(
+        &self,
+        notebook: &str,
+        date: &chrono::NaiveDate,
+    ) -> std::io::Result<PathBuf> {
+        if !valid_id(notebook) {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "invalid notebook id",
+            ));
+        }
+        Ok(self
+            .entries_dir(notebook)
+            .join(entry::legacy_entry_filename(date)))
+    }
+
+    /// Read an entry's content. The current format is a TipTap JSON document;
+    /// a legacy Markdown entry is returned as-is so the frontend can import
+    /// it. Returns an empty string when the entry does not exist yet
+    /// (create-on-first-write: no empty files are created).
     pub fn read_entry(
         &self,
         notebook: &str,
@@ -283,14 +301,23 @@ impl Store {
         let path = self.entry_path(notebook, date)?;
         match fs::read_to_string(&path) {
             Ok(content) => Ok(Some(content)),
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                let legacy = self.legacy_entry_path(notebook, date)?;
+                match fs::read_to_string(&legacy) {
+                    Ok(content) => Ok(Some(content)),
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+                    Err(e) => Err(e),
+                }
+            }
             Err(e) => Err(e),
         }
     }
 
-    /// Atomically write an entry. The file only appears once there is actual
-    /// content, so no empty-file spam accumulates. Returns true when the entry
-    /// file was created by this call.
+    /// Atomically write an entry as a TipTap JSON document. The file only
+    /// appears once there is actual content, so no empty-file spam accumulates.
+    /// Any legacy Markdown entry for the same date is removed once the JSON
+    /// version is saved. Returns true when the entry file was created by this
+    /// call.
     pub fn save_entry(
         &self,
         notebook: &str,
@@ -312,6 +339,10 @@ impl Store {
             f.sync_all()?;
         }
         fs::rename(&tmp, &path)?;
+        let legacy = self.legacy_entry_path(notebook, date)?;
+        if legacy.exists() {
+            let _ = fs::remove_file(&legacy);
+        }
         Ok(created)
     }
 
@@ -342,10 +373,8 @@ impl Store {
                 for item in rd.flatten() {
                     let name = item.file_name();
                     let Some(name) = name.to_str() else { continue };
-                    if entry::is_entry_filename(name) {
-                        if let Ok(date) = entry::parse_date(name.trim_end_matches(".md")) {
-                            dates.push(date);
-                        }
+                    if let Some(date) = entry::entry_filename_date(name) {
+                        dates.push(date);
                     }
                 }
             }
@@ -358,8 +387,9 @@ impl Store {
     }
 
     /// Store pasted image bytes under a content-hash filename. Deduplicated:
-    /// identical bytes are written at most once. Returns the Markdown image
-    /// reference (relative to the entry file) to insert at the cursor.
+    /// identical bytes are written at most once. Returns the stored filename;
+    /// the media reference relative to the entry file is
+    /// `../media/<filename>`.
     pub fn store_media(
         &self,
         notebook: &str,
@@ -384,10 +414,7 @@ impl Store {
             }
             fs::rename(&tmp, &path)?;
         }
-        Ok(format!(
-            "![pasted image]({})",
-            media::md_relative_path(&filename)
-        ))
+        Ok(filename)
     }
 
     /// Resolve a media reference found in an entry file to an absolute path, but
@@ -603,25 +630,50 @@ mod tests {
         let b = store
             .store_media(&nb.id, b"\x89PNG\r\n\x1a\nyy", Some("png"))
             .unwrap();
-        let rel_a = &a[16..a.len() - 1];
-        let rel_b = &b[16..b.len() - 1];
-        assert!(store.resolve_media("default", rel_a).is_some());
-        assert!(store.resolve_media(&nb.id, rel_b).is_some());
-        assert!(store.media_dir(&nb.id).join(rel_b).exists());
+        let rel_a = format!("../media/{a}");
+        let rel_b = format!("../media/{b}");
+        assert!(store.resolve_media("default", &rel_a).is_some());
+        assert!(store.resolve_media(&nb.id, &rel_b).is_some());
+        assert!(store.media_dir(&nb.id).join(&b).exists());
     }
 
     #[test]
     fn read_media_returns_bytes_and_mime() {
         let (_tmp, store) = store();
-        let md = store
+        let name = store
             .store_media("default", b"\x89PNG\r\n\x1a\nxx", Some("png"))
             .unwrap();
-        let rel = &md[16..md.len() - 1];
-        let (bytes, mime) = store.read_media("default", rel).unwrap();
+        let rel = format!("../media/{name}");
+        let (bytes, mime) = store.read_media("default", &rel).unwrap();
         assert_eq!(bytes, b"\x89PNG\r\n\x1a\nxx");
         assert_eq!(mime, "image/png");
         assert!(store.read_media("default", "../media/none.png").is_none());
-        assert!(store.read_media("nope", rel).is_none());
+        assert!(store.read_media("nope", &rel).is_none());
+    }
+
+    #[test]
+    fn reads_legacy_md_entry_and_replaces_it_on_save() {
+        let (_tmp, store) = store();
+        let d = date(2024, 2, 29);
+        let legacy = store.entries_dir("default");
+        fs::create_dir_all(&legacy).unwrap();
+        fs::write(legacy.join("2024-02-29.md"), "# old markdown\n").unwrap();
+
+        assert_eq!(
+            store.read_entry("default", &d).unwrap(),
+            Some("# old markdown\n".to_string())
+        );
+        assert_eq!(store.list_dates("default").unwrap(), vec![d]);
+
+        store
+            .save_entry("default", &d, "{\"type\":\"doc\"}")
+            .unwrap();
+        assert!(!legacy.join("2024-02-29.md").exists());
+        assert!(legacy.join("2024-02-29.json").exists());
+        assert_eq!(
+            store.read_entry("default", &d).unwrap(),
+            Some("{\"type\":\"doc\"}".to_string())
+        );
     }
 
     #[test]
@@ -646,7 +698,7 @@ mod tests {
             .unwrap()
             .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
             .collect();
-        assert_eq!(names, vec!["2024-05-05.md"]);
+        assert_eq!(names, vec!["2024-05-05.json"]);
     }
 
     #[test]

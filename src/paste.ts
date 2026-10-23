@@ -61,13 +61,13 @@ async function insertImageFile(
     const buffer = await file.arrayBuffer();
     const bytes = new Uint8Array(buffer);
     const ext = EXT_BY_MIME[file.type] ?? null;
-    const { markdown } = await saveMedia(currentNotebook, bytes, ext);
+    const { reference } = await saveMedia(currentNotebook, bytes, ext);
     const at = pos ?? editor.state.selection.from;
     editor
       .chain()
       .insertContentAt(at, {
         type: "image",
-        attrs: { src: markdownImageSrc(markdown), alt: "pasted image" },
+        attrs: { src: reference, alt: "pasted image" },
       })
       .focus()
       .run();
@@ -76,7 +76,4 @@ async function insertImageFile(
   }
 }
 
-export function markdownImageSrc(markdown: string): string {
-  const match = markdown.match(/\]\(([^)]+)\)/);
-  return match ? match[1] : "";
-}
+

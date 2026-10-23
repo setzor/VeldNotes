@@ -1,5 +1,6 @@
 import type { Editor } from "@tiptap/core";
 import { saveMedia } from "./api";
+import { frostedPrompt } from "./prompt";
 import { setPasteNotebook } from "./paste";
 import { EDITOR_FONTS } from "./fonts";
 import { FONTSIZE_CHOICES } from "./settings";
@@ -18,6 +19,7 @@ interface ToolButton {
   run: (editor: Editor) => void;
   active?: (editor: Editor) => boolean;
   inTableOnly?: boolean;
+  separator?: boolean;
 }
 
 const BUTTONS: ToolButton[] = [
@@ -36,6 +38,13 @@ const BUTTONS: ToolButton[] = [
     active: (e) => e.isActive("italic"),
   },
   {
+    id: "underline",
+    label: "U",
+    title: "Underline (Ctrl+U)",
+    run: (e) => e.chain().focus().toggleUnderline().run(),
+    active: (e) => e.isActive("underline"),
+  },
+  {
     id: "strike",
     label: "S",
     title: "Strikethrough",
@@ -50,11 +59,20 @@ const BUTTONS: ToolButton[] = [
     active: (e) => e.isActive("code"),
   },
   {
+    id: "highlight",
+    label: "\u{1F58D}",
+    title: "Highlight",
+    run: (e) => e.chain().focus().toggleHighlight().run(),
+    active: (e) => e.isActive("highlight"),
+    separator: true,
+  },
+  {
     id: "h1",
     label: "H1",
     title: "Heading 1",
     run: (e) => e.chain().focus().toggleHeading({ level: 1 }).run(),
     active: (e) => e.isActive("heading", { level: 1 }),
+    separator: true,
   },
   {
     id: "h2",
@@ -72,7 +90,7 @@ const BUTTONS: ToolButton[] = [
   },
   {
     id: "bullet",
-    label: "•",
+    label: "\u2022",
     title: "Bullet list",
     run: (e) => e.chain().focus().toggleBulletList().run(),
     active: (e) => e.isActive("bulletList"),
@@ -86,7 +104,7 @@ const BUTTONS: ToolButton[] = [
   },
   {
     id: "quote",
-    label: "❝",
+    label: "\u275d",
     title: "Quote",
     run: (e) => e.chain().focus().toggleBlockquote().run(),
     active: (e) => e.isActive("blockquote"),
@@ -100,15 +118,68 @@ const BUTTONS: ToolButton[] = [
   },
   {
     id: "hr",
-    label: "―",
+    label: "\u2015",
     title: "Divider",
     run: (e) => e.chain().focus().setHorizontalRule().run(),
   },
   {
+    id: "align-left",
+    label: "\u21e4",
+    title: "Align left",
+    run: (e) => e.chain().focus().setTextAlign("left").run(),
+    active: (e) => e.isActive({ textAlign: "left" }),
+    separator: true,
+  },
+  {
+    id: "align-center",
+    label: "\u2194",
+    title: "Align center",
+    run: (e) => e.chain().focus().setTextAlign("center").run(),
+    active: (e) => e.isActive({ textAlign: "center" }),
+  },
+  {
+    id: "align-right",
+    label: "\u21a6",
+    title: "Align right",
+    run: (e) => e.chain().focus().setTextAlign("right").run(),
+    active: (e) => e.isActive({ textAlign: "right" }),
+  },
+  {
+    id: "link",
+    label: "\u{1F517}",
+    title: "Add link",
+    run: (e) => {
+      void (async () => {
+        const previous = e.getAttributes("link").href as string | undefined;
+        const href = await frostedPrompt("Link URL", previous ?? "https://");
+        if (href === null) return;
+        if (href === "") {
+          e.chain().focus().extendMarkRange("link").unsetLink().run();
+          return;
+        }
+        e
+          .chain()
+          .focus()
+          .extendMarkRange("link")
+          .setLink({ href })
+          .run();
+      })();
+    },
+    active: (e) => e.isActive("link"),
+    separator: true,
+  },
+  {
     id: "image",
-    label: "🖼",
+    label: "\ud83d\uddbc",
     title: "Insert image",
     run: (e) => void insertImageFromFile(e),
+  },
+  {
+    id: "canvas",
+    label: "\u{1F3A8}",
+    title: "Insert canvas sketch",
+    run: (e) => e.chain().focus().insertCanvas().run(),
+    separator: true,
   },
   {
     id: "table",
@@ -191,13 +262,11 @@ async function insertFile(editor: Editor, file: File): Promise<void> {
     const buffer = await file.arrayBuffer();
     const bytes = new Uint8Array(buffer);
     const ext = file.type.split("/")[1] ?? null;
-    const { markdown } = await saveMedia(activeNotebook, bytes, ext);
-    const match = markdown.match(/\]\(([^)]+)\)/);
-    const src = match ? match[1] : "";
+    const { reference } = await saveMedia(activeNotebook, bytes, ext);
     editor
       .chain()
       .focus()
-      .insertContent({ type: "image", attrs: { src, alt: "image" } })
+      .insertContent({ type: "image", attrs: { src: reference, alt: "image" } })
       .run();
   } catch (err) {
     console.error("image insert failed", err);
@@ -210,6 +279,11 @@ export function createToolbar(
 ): void {
   container.textContent = "";
   for (const btn of BUTTONS) {
+    if (btn.separator) {
+      const sep = document.createElement("span");
+      sep.className = "tool-sep";
+      container.appendChild(sep);
+    }
     const el = document.createElement("button");
     el.type = "button";
     el.className = "tool-btn";
@@ -294,4 +368,3 @@ function watchToolbarEditor(
   toolbarWatchers.set(editor, true);
   editor.on("transaction", () => update());
 }
-

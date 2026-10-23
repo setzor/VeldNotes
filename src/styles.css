@@ -1830,3 +1830,274 @@ button {
   outline: none;
   border-color: var(--accent-soft);
 }
+
+/* --- expressive text formatting (post-Markdown editor) ---------------------- */
+
+.entry-editor u,
+.entry-editor u mark {
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 2px;
+}
+
+.entry-editor mark {
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.entry-editor a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-soft);
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.entry-editor a:hover {
+  text-decoration-color: var(--accent);
+}
+
+/* toolbar group separator */
+
+.tool-sep {
+  width: 1px;
+  height: 18px;
+  align-self: center;
+  margin: 0 3px;
+  background: var(--line);
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+/* --- free-form canvas block ------------------------------------------------- */
+
+.entry-canvas {
+  position: relative;
+  margin: 0 0 0.9em;
+  border: 1px dashed var(--accent-soft);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--paper) 92%, #fff);
+  min-height: 120px;
+  padding: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.entry-canvas:focus-visible,
+.entry-canvas:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow);
+  outline: none;
+}
+
+.entry-canvas-preview {
+  display: none;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.entry-canvas.has-preview .entry-canvas-preview {
+  display: block;
+}
+
+.entry-canvas-preview svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 380px;
+}
+
+.entry-canvas-label {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  padding: 8px 8px 2px;
+}
+
+.entry-canvas.has-preview .entry-canvas-label {
+  padding-top: 10px;
+}
+
+.entry-canvas-hint {
+  font-family: var(--sans);
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  padding: 0 8px 8px;
+}
+
+.entry-canvas.has-preview .entry-canvas-hint {
+  padding-bottom: 10px;
+}
+
+/* --- frosted canvas editor overlay ------------------------------------------ */
+
+.canvas-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.canvas-dialog {
+  width: min(1100px, calc(100vw - 48px));
+  height: min(760px, calc(100vh - 48px));
+  background: color-mix(in srgb, var(--card) 82%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  overflow: hidden;
+  display: flex;
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .canvas-dialog {
+    background: var(--card);
+  }
+}
+
+.canvas-frame {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+.canvas-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.canvas-title {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.canvas-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.canvas-btn {
+  height: 26px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--card) 72%, transparent);
+  color: var(--ink-soft);
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.canvas-btn:hover {
+  border-color: var(--accent-soft);
+  color: var(--ink);
+}
+
+.canvas-btn.primary {
+  border-color: var(--accent-soft);
+  background: var(--accent-bg);
+  color: var(--ink);
+}
+
+.canvas-body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.canvas-body .excalidraw {
+  height: 100%;
+}
+
+/* --- frosted prompt dialog --------------------------------------------------- */
+
+#prompt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#prompt-dialog {
+  width: min(380px, calc(100vw - 48px));
+  background: color-mix(in srgb, var(--card) 78%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  padding: 22px 24px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  #prompt-dialog {
+    background: var(--card);
+  }
+}
+
+#prompt-title {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+#prompt-input {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink);
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+}
+
+#prompt-input:focus {
+  outline: none;
+  border-color: var(--accent-soft);
+}
+
+#prompt-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+#prompt-actions button {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  padding: 6px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+#prompt-actions button:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 1px;
+}
+
+#prompt-ok {
+  border-color: var(--accent-soft) !important;
+  background: var(--accent-bg) !important;
+}
