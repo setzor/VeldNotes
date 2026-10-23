@@ -2,6 +2,7 @@ import type { Editor } from "@tiptap/core";
 import { saveMedia } from "./api";
 import { setPasteNotebook } from "./paste";
 import { EDITOR_FONTS } from "./fonts";
+import { FONTSIZE_CHOICES } from "./settings";
 
 let activeNotebook = "default";
 
@@ -241,6 +242,25 @@ export function createToolbar(
     );
   });
   container.appendChild(fontSelect);
+
+  const sizeSelect = document.createElement("select");
+  sizeSelect.id = "fontsize-select";
+  sizeSelect.title = "Text size";
+  for (const choice of FONTSIZE_CHOICES) {
+    const opt = document.createElement("option");
+    opt.value = String(choice.value);
+    opt.textContent = choice.label;
+    sizeSelect.appendChild(opt);
+  }
+  sizeSelect.addEventListener("mousedown", (event) => event.stopPropagation());
+  sizeSelect.addEventListener("change", () => {
+    window.dispatchEvent(
+      new CustomEvent("veldnotes:set-fontsize", {
+        detail: { size: Number(sizeSelect.value) },
+      }),
+    );
+  });
+  container.appendChild(sizeSelect);
 
   const update = (): void => {
     const editor = getEditor();

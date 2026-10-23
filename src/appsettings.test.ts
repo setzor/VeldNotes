@@ -25,7 +25,6 @@ describe("app settings dialog", () => {
     const dialog = document.querySelector("#app-settings") as HTMLElement;
     expect(dialog.querySelectorAll("#as-themes button").length).toBe(6);
     expect(dialog.querySelectorAll("#as-modes button").length).toBe(3);
-    expect(dialog.querySelectorAll("#as-fontsizes button").length).toBe(4);
     expect(dialog.querySelectorAll("#as-autosave button").length).toBe(4);
     expect(dialog.querySelectorAll("#as-weekday button").length).toBe(3);
     expect(dialog.querySelector("#as-datadir")?.textContent).toContain("com.veldnotes.app");

@@ -1,7 +1,6 @@
 import { dataDir } from "./api";
 import {
   AUTOSAVE_CHOICES,
-  FONTSIZE_CHOICES,
   WEEKDAY_CHOICES,
   loadSettings,
   saveSettings,
@@ -50,9 +49,6 @@ export function installAppSettings(cb: AppSettingsCallbacks): void {
       <button type="button" data-mode="light">Light</button>
       <button type="button" data-mode="dark">Dark</button>
     </div>
-
-    <label class="nb-field">Editor text size</label>
-    <div id="as-fontsizes"></div>
 
     <label class="nb-field">Autosave</label>
     <div id="as-autosave"></div>
@@ -150,17 +146,6 @@ export function openAppSettings(): void {
       saveTheme(themeId, mode);
       callbacks?.onThemeChanged(themeId, mode);
     }),
-  );
-
-  group(
-    overlayEl.querySelector<HTMLElement>("#as-fontsizes")!,
-    FONTSIZE_CHOICES,
-    (v) => v === current.editorFontSize,
-    (v) => {
-      current.editorFontSize = v as number;
-      saveSettings(current);
-      callbacks?.onSettingsChanged(current);
-    },
   );
 
   group(
