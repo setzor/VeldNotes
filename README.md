@@ -95,6 +95,8 @@ src-tauri/            Rust core (Tauri commands, storage, media)
 src/                  TypeScript frontend (thin UI layer)
   main.ts             boot: open today's entry, date strip
   editor.ts           TipTap editor + expressive formatting + canvas block
+  freeform.ts         type-anywhere sheet: click to place blocks (OneNote-style)
+  typography.ts       per-selection font family/size marks
   legacyMarkdown.ts   one-time import of old Markdown entries
   canvas.ts           free-form canvas editor overlay (Excalidraw, MIT)
   autosave.ts         debounced autosave with in-flight chaining
@@ -114,7 +116,7 @@ with the same Rust core and web UI (reference architecture:
 
 ## Out of scope (v0.1)
 
-Sync, accounts, encryption, freeform canvas, PDF export, search, streaks,
+Sync, accounts, encryption, PDF export, search, streaks,
 plugins.
 
 ## License

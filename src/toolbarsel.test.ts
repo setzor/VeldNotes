@@ -5,7 +5,7 @@ import { createToolbar } from "./toolbar";
 import { createEditor } from "./editor";
 
 describe("toolbar typography dropdowns", () => {
-  it("renders font and size dropdowns that dispatch change events", () => {
+  it("renders per-selection font and size dropdowns with a default option", () => {
     const host = document.createElement("div");
     document.body.appendChild(host);
     const editor = createEditor(host, "", { onUpdate: () => {} });
@@ -17,17 +17,30 @@ describe("toolbar typography dropdowns", () => {
     const sizeSelect = bar.querySelector<HTMLSelectElement>("#fontsize-select");
     expect(fontSelect).not.toBeNull();
     expect(sizeSelect).not.toBeNull();
-    expect(fontSelect!.options.length).toBeGreaterThanOrEqual(7);
-    expect(sizeSelect!.options.length).toBe(4);
+    expect(fontSelect!.options.length).toBe(8); // default + 7 fonts
+    expect(sizeSelect!.options.length).toBe(5); // default + 4 sizes
+    expect(fontSelect!.options[0].textContent).toBe("Default font");
 
-    const events: string[] = [];
-    window.addEventListener("veldnotes:set-font", () => events.push("font"));
-    window.addEventListener("veldnotes:set-fontsize", () => events.push("size"));
+    // applying a font to a selection stores a textStyle mark, not a global
+    editor.commands.insertContent("hello");
+    editor.chain().setTextSelection({ from: 1, to: 6 }).run();
     fontSelect!.value = "georgia";
     fontSelect!.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(editor.isActive("textStyle")).toBe(true);
+    expect(editor.getAttributes("textStyle").fontFamily).toContain("Georgia");
+
+    // resetting to default removes the mark
+    fontSelect!.value = "default";
+    fontSelect!.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(editor.getAttributes("textStyle").fontFamily).toBeFalsy();
+
     sizeSelect!.value = "19";
     sizeSelect!.dispatchEvent(new Event("change", { bubbles: true }));
-    expect(events).toEqual(["font", "size"]);
+    expect(editor.getAttributes("textStyle").fontSizePx).toBe(19);
+    sizeSelect!.value = "default";
+    sizeSelect!.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(editor.getAttributes("textStyle").fontSizePx).toBeFalsy();
+
     editor.destroy();
   });
 });

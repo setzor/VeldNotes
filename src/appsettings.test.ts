@@ -28,6 +28,23 @@ describe("app settings dialog", () => {
     expect(dialog.querySelectorAll("#as-autosave button").length).toBe(4);
     expect(dialog.querySelectorAll("#as-weekday button").length).toBe(3);
     expect(dialog.querySelector("#as-datadir")?.textContent).toContain("com.veldnotes.app");
+    const fontSel = dialog.querySelector<HTMLSelectElement>("#as-font");
+    const sizeSel = dialog.querySelector<HTMLSelectElement>("#as-fontsize");
+    expect(fontSel).not.toBeNull();
+    expect(sizeSel).not.toBeNull();
+    expect(fontSel!.options.length).toBeGreaterThanOrEqual(7);
+    expect(fontSel!.options[0].value).toBe("journal");
+    expect(sizeSel!.options.length).toBe(4);
+
+    // default font/size are document-wide defaults, applied via CSS vars
+    fontSel!.value = "georgia";
+    fontSel!.dispatchEvent(new Event("change", { bubbles: true }));
+    expect((changed as { editorFontId: string }).editorFontId).toBe("georgia");
+    expect(loadSettings().editorFontId).toBe("georgia");
+    sizeSel!.value = "21";
+    sizeSel!.dispatchEvent(new Event("change", { bubbles: true }));
+    expect((changed as { editorFontSize: number }).editorFontSize).toBe(21);
+    expect(loadSettings().editorFontSize).toBe(21);
 
     // picking an autosave choice fires onSettingsChanged and persists
     const lazy = Array.from(

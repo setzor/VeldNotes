@@ -15,7 +15,9 @@ import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
 import { mediaDataUrl, readMedia } from "./api";
 import { installImagePaste } from "./paste";
-import { openCanvasEditor } from "./canvas";
+import { openCanvasEditor, showCanvasError } from "./canvas";
+import { Typography } from "./typography";
+import { FreeformSheet } from "./freeform";
 import { tiptapContentFromMarkdown } from "./legacyMarkdown";
 
 let activeNotebook = "default";
@@ -45,6 +47,15 @@ const LocalMediaImage = Image.extend({
         renderHTML: (attrs) => {
           const w = attrs.width as number | null;
           return w ? { style: `width: ${w}px` } : {};
+        },
+      },
+      textAlign: {
+        default: null,
+        parseHTML: (el) =>
+          (el as HTMLElement).getAttribute("data-text-align") ?? null,
+        renderHTML: (attrs) => {
+          const align = attrs.textAlign as string | null;
+          return align ? { "data-text-align": align } : {};
         },
       },
     };
@@ -101,6 +112,12 @@ const LocalMediaImage = Image.extend({
       dom.className = "entry-image";
       dom.appendChild(img);
 
+      const applyAlign = (align: string | null): void => {
+        dom.style.marginLeft = align === "center" || align === "right" ? "auto" : "";
+        dom.style.marginRight = align === "center" || align === "left" ? "auto" : "";
+      };
+      applyAlign(node.attrs.textAlign as string | null);
+
       const MIN_W = 40;
       const commit = (px: number): void => {
         const pos = typeof getPos === "function" ? getPos() : null;
@@ -154,6 +171,7 @@ const LocalMediaImage = Image.extend({
           const nw = updated.attrs.width as number | null;
           if (nw) img.style.width = `${nw}px`;
           else img.style.width = "";
+          applyAlign(updated.attrs.textAlign as string | null);
           return true;
         },
       };
@@ -191,6 +209,15 @@ const CanvasBlock = Node.create({
         parseHTML: (el) => (el as HTMLElement).getAttribute("data-preview") ?? "",
         renderHTML: () => ({}),
       },
+      textAlign: {
+        default: null,
+        parseHTML: (el) =>
+          (el as HTMLElement).getAttribute("data-text-align") ?? null,
+        renderHTML: (attrs) => {
+          const align = attrs.textAlign as string | null;
+          return align ? { "data-text-align": align } : {};
+        },
+      },
     };
   },
 
@@ -211,6 +238,12 @@ const CanvasBlock = Node.create({
       const dom = document.createElement("div");
       dom.className = "entry-canvas";
       dom.setAttribute("data-canvas", "");
+
+      const applyAlign = (align: string | null): void => {
+        dom.style.marginLeft = align === "center" || align === "right" ? "auto" : "";
+        dom.style.marginRight = align === "center" || align === "left" ? "auto" : "";
+      };
+      applyAlign(node.attrs.textAlign as string | null);
 
       const preview = document.createElement("div");
       preview.className = "entry-canvas-preview";
@@ -238,7 +271,7 @@ const CanvasBlock = Node.create({
       const edit = (): void => {
         if (busy) return;
         busy = true;
-        void openCanvasEditor(node.attrs.scene as string)
+        openCanvasEditor(node.attrs.scene as string)
           .then((result) => {
             busy = false;
             if (!result) return;
@@ -258,9 +291,12 @@ const CanvasBlock = Node.create({
               }),
             );
           })
-          .catch((err) => {
+          .catch((err: unknown) => {
             busy = false;
             console.error("canvas editor failed", err);
+            showCanvasError(
+              "The canvas could not be opened. Please try again.",
+            );
           });
       };
 
@@ -280,6 +316,7 @@ const CanvasBlock = Node.create({
           if (updated.type.name !== "canvasBlock") return false;
           node = updated;
           applyPreview(updated.attrs.preview as string);
+          applyAlign(updated.attrs.textAlign as string | null);
           return true;
         },
       };
@@ -337,8 +374,11 @@ export function createEditor(
       Underline,
       Highlight.configure({ multicolor: true }),
       TextStyle,
+      Typography,
       Color,
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      TextAlign.configure({
+        types: ["heading", "paragraph", "image", "canvasBlock"],
+      }),
       Link.configure({
         openOnClick: false,
         autolink: true,
@@ -350,6 +390,7 @@ export function createEditor(
       TableRow,
       TableCell,
       TableHeader,
+      FreeformSheet,
       Placeholder.configure({
         placeholder: "Open the page and write…",
       }),

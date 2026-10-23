@@ -44,13 +44,7 @@ import {
 import { createToolbar, setToolbarNotebook } from "./toolbar";
 import { installAppSettings, openAppSettings, getAppSettings } from "./appsettings";
 import type { AppSettings } from "./settings";
-import {
-  applyEditorFont,
-  EDITOR_FONTS,
-  loadEditorFont,
-  saveEditorFont,
-} from "./fonts";
-import { FONTSIZE_CHOICES, saveSettings } from "./settings";
+import { applyDefaultFontStack, fontStack } from "./fonts";
 import { installContextMenu, setEditorAccessor, setSidebarActions } from "./contextmenu";
 import { installNotebookSettings, openNotebookSettings } from "./notebooksettings";
 import { loadSubtitleFor, saveSubtitleFor } from "./subtitle";
@@ -224,8 +218,6 @@ async function switchNotebook(id: string): Promise<void> {
   activeNotebookId = id;
   saveLastNotebook(id);
   setToolbarNotebook(id);
-  applyEditorFont(id);
-  syncFontSelect();
   currentDate = "";
   await refreshEntries();
   renderCover();
@@ -344,17 +336,18 @@ function refreshFirstWeekday(): void {
       : appSettings.firstWeekday;
 }
 
-function applyEditorFontSize(): void {
+function applyEditorDefaults(): void {
   document.documentElement.style.setProperty(
     "--editor-font-size",
     `${appSettings.editorFontSize}px`,
   );
+  applyDefaultFontStack(fontStack(appSettings.editorFontId || "journal"));
 }
 
 installAppSettings({
   onSettingsChanged: (updated) => {
     appSettings = updated;
-    applyEditorFontSize();
+    applyEditorDefaults();
     refreshFirstWeekday();
     renderWeekdays();
     renderCalendar();
@@ -366,7 +359,7 @@ installAppSettings({
 });
 
 refreshFirstWeekday();
-applyEditorFontSize();
+applyEditorDefaults();
 
 settingsBtnEl.addEventListener("click", () => {
   openAppSettings();
@@ -429,31 +422,8 @@ window.addEventListener("veldnotes:open-shelf", () => {
   shelfPopEl.hidden = false;
 });
 
-function syncFontSelect(): void {
-  const select = document.querySelector<HTMLSelectElement>("#font-select");
-  if (select) select.value = loadEditorFont(activeNotebookId);
-}
-
-window.addEventListener("veldnotes:set-font", (event) => {
-  const fontId = (event as CustomEvent<{ fontId: string }>).detail.fontId;
-  if (!EDITOR_FONTS.some((f) => f.id === fontId)) return;
-  saveEditorFont(activeNotebookId, fontId);
-  applyEditorFont(activeNotebookId);
-});
-
-function syncFontsizeSelect(): void {
-  const select = document.querySelector<HTMLSelectElement>("#fontsize-select");
-  if (select) select.value = String(appSettings.editorFontSize);
-}
-
-window.addEventListener("veldnotes:set-fontsize", (event) => {
-  const size = (event as CustomEvent<{ size: number }>).detail.size;
-  const valid = FONTSIZE_CHOICES.some((c) => c.value === size);
-  if (!valid) return;
-  appSettings = { ...appSettings, editorFontSize: size };
-  saveSettings(appSettings);
-  applyEditorFontSize();
-});
+// The toolbar font/size dropdowns now apply per-selection (see typography.ts);
+// the document-wide defaults live in app settings and are applied via CSS vars.
 
 window.addEventListener("veldnotes:delete-image", (event) => {
   const src = (event as CustomEvent<{ src: string }>).detail.src;
@@ -573,9 +543,6 @@ async function boot(): Promise<void> {
   const last = loadLastNotebook();
   activeNotebookId = notebooks.some((n) => n.id === last) ? last : notebooks[0].id;
   setToolbarNotebook(activeNotebookId);
-  applyEditorFont(activeNotebookId);
-  syncFontSelect();
-  syncFontsizeSelect();
   await refreshEntries();
   renderCover();
   renderWeekdays();

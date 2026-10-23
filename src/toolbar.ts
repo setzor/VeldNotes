@@ -300,39 +300,57 @@ export function createToolbar(
 
   const fontSelect = document.createElement("select");
   fontSelect.id = "font-select";
-  fontSelect.title = "Editor font";
-  for (const font of EDITOR_FONTS) {
+  fontSelect.title = "Font (selected text)";
+  {
     const opt = document.createElement("option");
-    opt.value = font.id;
-    opt.textContent = font.label;
+    opt.value = "default";
+    opt.textContent = "Default font";
     fontSelect.appendChild(opt);
+    for (const font of EDITOR_FONTS) {
+      const o = document.createElement("option");
+      o.value = font.id;
+      o.textContent = font.label;
+      fontSelect.appendChild(o);
+    }
   }
   fontSelect.addEventListener("mousedown", (event) => event.stopPropagation());
   fontSelect.addEventListener("change", () => {
-    window.dispatchEvent(
-      new CustomEvent("veldnotes:set-font", {
-        detail: { fontId: fontSelect.value },
-      }),
-    );
+    const editor = getEditor();
+    if (!editor) return;
+    if (fontSelect.value === "default") {
+      editor.chain().focus().unsetFontFamily().run();
+    } else {
+      editor.chain().focus().setFontFamily(fontSelect.value).run();
+    }
+    update();
   });
   container.appendChild(fontSelect);
 
   const sizeSelect = document.createElement("select");
   sizeSelect.id = "fontsize-select";
-  sizeSelect.title = "Text size";
-  for (const choice of FONTSIZE_CHOICES) {
+  sizeSelect.title = "Text size (selected text)";
+  {
     const opt = document.createElement("option");
-    opt.value = String(choice.value);
-    opt.textContent = choice.label;
+    opt.value = "default";
+    opt.textContent = "Default size";
     sizeSelect.appendChild(opt);
+    for (const choice of FONTSIZE_CHOICES) {
+      const o = document.createElement("option");
+      o.value = String(choice.value);
+      o.textContent = choice.label;
+      sizeSelect.appendChild(o);
+    }
   }
   sizeSelect.addEventListener("mousedown", (event) => event.stopPropagation());
   sizeSelect.addEventListener("change", () => {
-    window.dispatchEvent(
-      new CustomEvent("veldnotes:set-fontsize", {
-        detail: { size: Number(sizeSelect.value) },
-      }),
-    );
+    const editor = getEditor();
+    if (!editor) return;
+    if (sizeSelect.value === "default") {
+      editor.chain().focus().unsetFontSizePx().run();
+    } else {
+      editor.chain().focus().setFontSizePx(Number(sizeSelect.value)).run();
+    }
+    update();
   });
   container.appendChild(sizeSelect);
 
@@ -340,6 +358,28 @@ export function createToolbar(
     const editor = getEditor();
     watchToolbarEditor(editor, update);
     const inTable = editor ? editor.isActive("table") : false;
+
+    if (editor) {
+      const family = editor.getAttributes("textStyle").fontFamily as
+        | string
+        | undefined;
+      const activeFont = EDITOR_FONTS.find(
+        (f) =>
+          family && f.stack.replace(/\"/g, "'") === family,
+      );
+      fontSelect.value = activeFont?.id ?? "default";
+      const sizePx = editor.getAttributes("textStyle").fontSizePx as
+        | number
+        | undefined;
+      sizeSelect.value =
+        sizePx && FONTSIZE_CHOICES.some((c) => c.value === sizePx)
+          ? String(sizePx)
+          : "default";
+    } else {
+      fontSelect.value = "default";
+      sizeSelect.value = "default";
+    }
+
     for (const el of Array.from(
       container.querySelectorAll<HTMLButtonElement>(".tool-btn"),
     )) {
