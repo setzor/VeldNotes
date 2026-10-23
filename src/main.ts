@@ -46,6 +46,7 @@ import {
 import { createToolbar, setToolbarNotebook } from "./toolbar";
 import { installContextMenu, setSidebarActions } from "./contextmenu";
 import { installNotebookSettings, openNotebookSettings } from "./notebooksettings";
+import { loadSubtitleFor, saveSubtitleFor } from "./subtitle";
 
 let currentDate = "";
 let todayStr = "";
@@ -233,17 +234,7 @@ coverEl.addEventListener("click", () => {
 
 /* --- editable cover text --------------------------------------------------- */
 
-const COVER_SUB_KEY_PREFIX = "veldnotes.cover.subtitle.";
-const DEFAULT_SUBTITLE = "a cozy daily journal";
-
-function subtitleKey(notebookId: string): string {
-  return COVER_SUB_KEY_PREFIX + notebookId;
-}
-
-function loadSubtitleFor(notebookId: string | undefined): string {
-  if (!notebookId) return DEFAULT_SUBTITLE;
-  return localStorage.getItem(subtitleKey(notebookId)) || DEFAULT_SUBTITLE;
-}
+ 
 
 function renderCoverSubtitle(): void {
   coverSubEl.textContent = loadSubtitleFor(activeNotebookId);
@@ -278,9 +269,7 @@ coverBrandEl.addEventListener("blur", () => {
 
 coverSubEl.addEventListener("blur", () => {
   const value = (coverSubEl.textContent ?? "").trim();
-  if (activeNotebookId) {
-    localStorage.setItem(subtitleKey(activeNotebookId), value);
-  }
+  if (activeNotebookId) saveSubtitleFor(activeNotebookId, value);
 });
 
 document.addEventListener("click", (event) => {
@@ -416,7 +405,10 @@ installNotebookSettings({
       nb.cover = meta.cover;
       nb.emoji = meta.emoji ?? null;
     }
-    if (meta.id === activeNotebookId) renderCover();
+    if (meta.id === activeNotebookId) {
+      renderCover();
+      renderCoverSubtitle();
+    }
     renderShelfPopover();
   },
 });
@@ -433,6 +425,28 @@ window.addEventListener("veldnotes:edit-notebook", (event) => {
 window.addEventListener("veldnotes:open-shelf", () => {
   renderShelfPopover();
   shelfPopEl.hidden = false;
+});
+
+window.addEventListener("veldnotes:delete-image", (event) => {
+  const src = (event as CustomEvent<{ src: string }>).detail.src;
+  if (!editor || !src) return;
+  const doc = editor.state.doc;
+  let targetPos: number | null = null;
+  doc.descendants((node, pos) => {
+    if (targetPos !== null) return false;
+    if (node.type.name === "image" && node.attrs.src === src) {
+      targetPos = pos;
+      return false;
+    }
+    return true;
+  });
+  if (targetPos === null) return;
+  editor
+    .chain()
+    .focus()
+    .setNodeSelection(targetPos)
+    .deleteSelection()
+    .run();
 });
 
 /* --- delete day's note with confirmation ------------------------------------ */

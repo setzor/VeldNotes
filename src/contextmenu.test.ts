@@ -78,3 +78,19 @@ describe("sidebar context menu", () => {
     expect(labels).toContain("Switch notebook…");
   });
 });
+
+describe("image context menu", () => {
+  it("offers Cut image and Copy image over entry images", () => {
+    const host = document.createElement("div");
+    host.className = "entry-image";
+    const img = document.createElement("img");
+    img.dataset.pendingSrc = "../media/x.png";
+    host.appendChild(img);
+    document.body.appendChild(host);
+    host.dispatchEvent(contextmenuEvent(host));
+    const menu = document.querySelector("#context-menu") as HTMLElement;
+    const labels = Array.from(menu.querySelectorAll("button")).map((b) => b.textContent);
+    expect(labels).toContain("Cut image");
+    expect(labels).toContain("Copy image");
+  });
+});

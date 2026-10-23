@@ -5,6 +5,7 @@ import {
   type NotebookMeta,
 } from "./api";
 import { COVER_EMOJIS, COVER_STYLES, coverColors } from "./shelf";
+import { loadSubtitleFor, saveSubtitleFor } from "./subtitle";
 
 export interface SettingsCallbacks {
   onSaved: (meta: NotebookMeta) => void;
@@ -38,6 +39,8 @@ export function installNotebookSettings(cb: SettingsCallbacks): void {
     </div>
     <label class="nb-field">Name</label>
     <input id="nb-name" type="text" maxlength="48" />
+    <label class="nb-field">Subtitle</label>
+    <input id="nb-sub" type="text" maxlength="48" />
     <label class="nb-field">Cover colour</label>
     <div id="nb-covers"></div>
     <label class="nb-field">Sticker</label>
@@ -59,6 +62,8 @@ export function installNotebookSettings(cb: SettingsCallbacks): void {
   dialogEl.querySelector("#nb-name")?.addEventListener("keydown", (event) => {
     if ((event as KeyboardEvent).key === "Enter") save();
   });
+  dialogEl.querySelector("#nb-name")?.addEventListener("input", updatePreview);
+  dialogEl.querySelector("#nb-sub")?.addEventListener("input", updatePreview);
 
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !overlayEl!.hidden) {
@@ -80,6 +85,8 @@ export function openNotebookSettings(nb: NotebookMeta): void {
 
   const nameInput = dialogEl.querySelector<HTMLInputElement>("#nb-name")!;
   nameInput.value = nb.name;
+  const subInput = dialogEl.querySelector<HTMLInputElement>("#nb-sub")!;
+  subInput.value = loadSubtitleFor(nb.id);
 
   renderCoverChoices();
   renderEmojiChoices();
@@ -105,6 +112,8 @@ async function save(): Promise<void> {
   if (name !== meta.name) {
     meta = await renameNotebook(meta.id, name);
   }
+  const subInput = dialogEl?.querySelector<HTMLInputElement>("#nb-sub");
+  if (subInput) saveSubtitleFor(meta.id, subInput.value.trim());
   if (chosenCover !== meta.cover) {
     meta = await setNotebookCover(meta.id, chosenCover);
   }
@@ -185,4 +194,7 @@ function updatePreview(): void {
   const nameEl = preview.querySelector<HTMLElement>("#nb-preview-name");
   const input = dialogEl?.querySelector<HTMLInputElement>("#nb-name");
   if (nameEl && input) nameEl.textContent = input.value.trim() || activeTarget.name;
+  const subEl = preview.querySelector<HTMLElement>("#nb-preview-sub");
+  const subInput = dialogEl?.querySelector<HTMLInputElement>("#nb-sub");
+  if (subEl && subInput) subEl.textContent = subInput.value.trim() || "";
 }
