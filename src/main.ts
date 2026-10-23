@@ -44,6 +44,7 @@ import {
   saveLastNotebook,
 } from "./shelf";
 import { createToolbar, setToolbarNotebook } from "./toolbar";
+import { installContextMenu } from "./contextmenu";
 
 let currentDate = "";
 let todayStr = "";
@@ -384,19 +385,9 @@ watchSystemMode(() => {
   if (currentMode === "auto") applyTheme(currentThemeId, currentMode);
 });
 
-/* --- suppress the webview's devtools context menu --------------------------- */
+/* --- frosted custom context menu --------------------------------------------- */
 
-document.addEventListener(
-  "contextmenu",
-  (event) => {
-    const target = event.target as HTMLElement;
-    if (target.closest("input, textarea, [contenteditable], .entry-editor")) {
-      return;
-    }
-    event.preventDefault();
-  },
-  true,
-);
+installContextMenu();
 
 /* --- delete day's note with confirmation ------------------------------------ */
 
