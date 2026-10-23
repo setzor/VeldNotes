@@ -27,7 +27,11 @@
       "csp": null,
       "assetProtocol": {
         "enable": true,
-        "scope": ["$APPDATA/**", "$HOME/**", "$DATA/**"]
+        "scope": [
+          "$APPDATA/**",
+          "$HOME/**",
+          "$DATA/**"
+        ]
       }
     }
   },
@@ -44,6 +48,16 @@
     "linux": {
       "appimage": {
         "bundleMediaFramework": false
+      },
+      "deb": {
+        "files": {
+          "/usr/share/applications/com.veldnotes.app.desktop": "src-tauri/desktop/com.veldnotes.app.desktop"
+        }
+      },
+      "rpm": {
+        "files": {
+          "/usr/share/applications/com.veldnotes.app.desktop": "src-tauri/desktop/com.veldnotes.app.desktop"
+        }
       }
     }
   }

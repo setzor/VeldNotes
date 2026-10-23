@@ -1,0 +1,9 @@
+[Desktop Entry]
+Categories=Utility;
+Comment=A cozy, local-first daily journaling app
+Exec=veldnotes %U
+Icon=veldnotes
+Name=VeldNotes
+StartupWMClass=veldnotes
+Terminal=false
+Type=Application
