@@ -51,12 +51,12 @@
       },
       "deb": {
         "files": {
-          "/usr/share/applications/com.veldnotes.app.desktop": "src-tauri/desktop/com.veldnotes.app.desktop"
+          "/usr/share/applications/com.veldnotes.app.desktop": "desktop/com.veldnotes.app.desktop"
         }
       },
       "rpm": {
         "files": {
-          "/usr/share/applications/com.veldnotes.app.desktop": "src-tauri/desktop/com.veldnotes.app.desktop"
+          "/usr/share/applications/com.veldnotes.app.desktop": "desktop/com.veldnotes.app.desktop"
         }
       }
     }
