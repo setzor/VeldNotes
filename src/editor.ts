@@ -202,12 +202,18 @@ const CanvasBlock = Node.create({
       scene: {
         default: "",
         parseHTML: (el) => (el as HTMLElement).getAttribute("data-scene") ?? "",
-        renderHTML: () => ({}),
+        renderHTML: (attrs) => {
+          const scene = attrs.scene as string;
+          return scene ? { "data-scene": scene } : {};
+        },
       },
       preview: {
         default: "",
         parseHTML: (el) => (el as HTMLElement).getAttribute("data-preview") ?? "",
-        renderHTML: () => ({}),
+        renderHTML: (attrs) => {
+          const preview = attrs.preview as string;
+          return preview ? { "data-preview": preview } : {};
+        },
       },
       textAlign: {
         default: null,
@@ -229,7 +235,6 @@ const CanvasBlock = Node.create({
     return [
       "div",
       mergeAttributes({ "data-canvas": "" }, HTMLAttributes),
-      0,
     ];
   },
 

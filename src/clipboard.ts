@@ -1,0 +1,179 @@
+import type { Editor } from "@tiptap/core";
+import { readMedia } from "./api";
+
+/**
+ * Clipboard helpers for media blocks. Two layers:
+ *
+ * 1. OS clipboard: write the actual image bytes as a clipboard file/blob so
+ *    pasting into other apps (or back into VeldNotes) yields the image, not
+ *    a text path.
+ * 2. Editor clipboard: select the ProseMirror node and let the editor's own
+ *    copy machinery put the serialized node on the clipboard, so in-app
+ *    cut/paste re-inserts the exact same block (the media store dedupes by
+ *    content hash, so no duplicate files are created).
+ */
+
+let activeNotebook = "default";
+
+export function setClipboardNotebook(notebook: string): void {
+  activeNotebook = notebook;
+}
+
+async function writeImageToClipboard(reference: string): Promise<boolean> {
+  if (typeof ClipboardItem === "undefined" || !navigator.clipboard?.write) {
+    return false;
+  }
+  try {
+    const { data, mime } = await readMedia(activeNotebook, reference);
+    const bytes = new Uint8Array(data);
+    const type = mime.startsWith("image/") ? mime : "image/png";
+    const blob = new Blob([bytes], { type });
+    await navigator.clipboard.write([
+      new ClipboardItem({ [type]: blob }),
+    ]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Copy an image node to the system clipboard (real image bytes). */
+export async function copyImage(
+  editor: Editor | null,
+  reference: string,
+): Promise<void> {
+  const osOk = await writeImageToClipboard(reference);
+  if (osOk) return;
+  // Fallback: copy as editor node so at least in-app paste works.
+  if (editor) {
+    selectNodeBySrc(editor, reference, false);
+    triggerCopy();
+  }
+}
+
+/** Cut an image node: copy real bytes, then remove the node from the doc. */
+export async function cutImage(
+  editor: Editor | null,
+  reference: string,
+): Promise<void> {
+  await copyImage(editor, reference);
+  removeImage(editor, reference);
+}
+
+/** Remove the first image node whose src matches the reference. */
+export function removeImage(
+  editor: Editor | null,
+  reference: string,
+): void {
+  if (!editor || !reference) return;
+  const doc = editor.state.doc;
+  let targetPos: number | null = null;
+  doc.descendants((node, pos) => {
+    if (targetPos !== null) return false;
+    if (node.type.name === "image" && node.attrs.src === reference) {
+      targetPos = pos;
+      return false;
+    }
+    return true;
+  });
+  if (targetPos === null) return;
+  editor
+    .chain()
+    .focus()
+    .setNodeSelection(targetPos)
+    .deleteSelection()
+    .run();
+}
+
+function selectNodeBySrc(
+  editor: Editor,
+  reference: string,
+  focus = true,
+): boolean {
+  let targetPos: number | null = null;
+  editor.state.doc.descendants((node, pos) => {
+    if (targetPos !== null) return false;
+    if (node.type.name === "image" && node.attrs.src === reference) {
+      targetPos = pos;
+      return false;
+    }
+    return true;
+  });
+  if (targetPos === null) return false;
+  const chain = editor.chain();
+  if (focus) chain.focus();
+  return chain.setNodeSelection(targetPos).run();
+}
+
+/** Select and copy a canvas sketch node (in-app clipboard round-trip). */
+export function copyCanvas(
+  editor: Editor | null,
+  canvasDom: HTMLElement,
+): void {
+  if (!editor) return;
+  const pos = findCanvasPos(editor, canvasDom);
+  if (pos === null) return;
+  editor.chain().focus().setNodeSelection(pos).run();
+  triggerCopy();
+}
+
+/** Fire a copy so ProseMirror serializes the node selection to the clipboard. */
+function triggerCopy(): void {
+  try {
+    void document.execCommand("copy");
+  } catch {
+    // execCommand unavailable (e.g. test environments): selection remains, so
+    // Ctrl+C still copies via the editor's own keyboard handler.
+  }
+}
+
+/** Select, copy, then remove a canvas sketch node. */
+export function cutCanvas(
+  editor: Editor | null,
+  canvasDom: HTMLElement,
+): void {
+  if (!editor) return;
+  copyCanvas(editor, canvasDom);
+  const pos = findCanvasPos(editor, canvasDom);
+  if (pos === null) return;
+  editor
+    .chain()
+    .focus()
+    .setNodeSelection(pos)
+    .deleteSelection()
+    .run();
+}
+
+/** Remove a canvas sketch node. */
+export function deleteCanvas(
+  editor: Editor | null,
+  canvasDom: HTMLElement,
+): void {
+  if (!editor) return;
+  const pos = findCanvasPos(editor, canvasDom);
+  if (pos === null) return;
+  editor
+    .chain()
+    .focus()
+    .setNodeSelection(pos)
+    .deleteSelection()
+    .run();
+}
+
+function findCanvasPos(
+  editor: Editor,
+  canvasDom: HTMLElement,
+): number | null {
+  let targetPos: number | null = null;
+  editor.state.doc.descendants((node, pos) => {
+    if (targetPos !== null) return false;
+    if (node.type.name !== "canvasBlock") return true;
+    const dom = editor.view.nodeDOM(pos);
+    if (dom === canvasDom || (dom instanceof HTMLElement && dom.contains(canvasDom))) {
+      targetPos = pos;
+      return false;
+    }
+    return true;
+  });
+  return targetPos;
+}

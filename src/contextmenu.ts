@@ -1,6 +1,13 @@
 import type { Editor } from "@tiptap/core";
 import type { NotebookMeta } from "./api";
 import { frostedPrompt } from "./prompt";
+import {
+  copyCanvas,
+  copyImage,
+  cutCanvas,
+  cutImage,
+  deleteCanvas,
+} from "./clipboard";
 
 interface MenuEntry {
   label: string;
@@ -46,26 +53,33 @@ function buildEntries(target: HTMLElement): MenuEntry[] {
   const img = target.closest(".entry-image");
 
   if (img) {
+    const reference =
+      (img.querySelector("img")?.dataset.pendingSrc as string) ?? "";
     entries.push({
       label: "Cut image",
-      run: () => {
-        void navigator.clipboard
-          .writeText((img.querySelector("img")?.dataset.pendingSrc as string) ?? "")
-          .catch(() => {});
-        window.dispatchEvent(
-          new CustomEvent("veldnotes:delete-image", {
-            detail: { src: img.querySelector("img")?.dataset.pendingSrc ?? "" },
-          }),
-        );
-      },
+      run: () => void cutImage(getEditor(), reference),
     });
     entries.push({
       label: "Copy image",
-      run: () => {
-        void navigator.clipboard
-          .writeText((img.querySelector("img")?.dataset.pendingSrc as string) ?? "")
-          .catch(() => {});
-      },
+      run: () => void copyImage(getEditor(), reference),
+    });
+    return entries;
+  }
+
+  const canvas = target.closest<HTMLElement>(".entry-canvas");
+  if (canvas) {
+    entries.push({
+      label: "Cut sketch",
+      run: () => cutCanvas(getEditor(), canvas),
+    });
+    entries.push({
+      label: "Copy sketch",
+      run: () => copyCanvas(getEditor(), canvas),
+    });
+    entries.push({
+      label: "Delete sketch",
+      danger: true,
+      run: () => deleteCanvas(getEditor(), canvas),
     });
     return entries;
   }
@@ -77,10 +91,20 @@ function buildEntries(target: HTMLElement): MenuEntry[] {
       {
         label: "Paste",
         run: () => {
-          void navigator.clipboard
-            .readText()
-            .then((text) => document.execCommand("insertText", false, text))
-            .catch(() => {});
+          const editableEl = editable;
+          void (async () => {
+            // Prefer the webview's native paste event: it carries files
+            // (images) as well as text, and the editor's own handlers convert
+            // image files into image nodes. Fall back to plain-text insert.
+            const ok = document.execCommand("paste");
+            if (ok || !editableEl) return;
+            try {
+              const text = await navigator.clipboard.readText();
+              if (text) document.execCommand("insertText", false, text);
+            } catch {
+              // clipboard unavailable: nothing to do
+            }
+          })();
         },
       },
       {

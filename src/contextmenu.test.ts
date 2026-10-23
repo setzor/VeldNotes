@@ -92,5 +92,24 @@ describe("image context menu", () => {
     const labels = Array.from(menu.querySelectorAll("button")).map((b) => b.textContent);
     expect(labels).toContain("Cut image");
     expect(labels).toContain("Copy image");
+    // no stray text-URL copy: the actions run through the clipboard module
+    expect(labels).not.toContain("Cut");
+    expect(labels).not.toContain("Copy");
+  });
+});
+
+describe("canvas context menu", () => {
+  it("offers sketch cut/copy/delete over the canvas block", () => {
+    installContextMenu();
+    const host = document.createElement("div");
+    host.className = "entry-canvas";
+    host.setAttribute("data-canvas", "");
+    document.body.appendChild(host);
+    host.dispatchEvent(contextmenuEvent(host));
+    const menu = document.querySelector("#context-menu") as HTMLElement;
+    const labels = Array.from(menu.querySelectorAll("button")).map((b) => b.textContent);
+    expect(labels).toContain("Cut sketch");
+    expect(labels).toContain("Copy sketch");
+    expect(labels).toContain("Delete sketch");
   });
 });
