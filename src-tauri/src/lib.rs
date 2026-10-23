@@ -23,6 +23,7 @@ pub fn run() {
             commands::set_notebook_cover,
             commands::get_entry,
             commands::save_entry,
+            commands::delete_entry,
             commands::list_entries,
             commands::save_media,
             commands::media_path,

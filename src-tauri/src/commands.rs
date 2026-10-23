@@ -143,6 +143,18 @@ pub fn save_entry(
 }
 
 #[tauri::command]
+pub fn delete_entry(
+    state: State<'_, AppState>,
+    notebook: String,
+    date: String,
+) -> Result<bool, String> {
+    let date = entry::parse_date(&date).map_err(|e| e.to_string())?;
+    with_store(&state, |s| {
+        s.delete_entry(&notebook, &date).map_err(|e| e.to_string())
+    })
+}
+
+#[tauri::command]
 pub fn list_entries(
     state: State<'_, AppState>,
     notebook: String,

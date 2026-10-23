@@ -60,11 +60,23 @@
           <div id="entry-date"></div>
           <button id="next-day" class="icon-btn" type="button" title="Next day" aria-label="Next day">&#8250;</button>
           <button id="today-btn" type="button">Today</button>
+          <button id="delete-btn" type="button" title="Delete this day's note">Delete</button>
           <span id="save-state"></span>
         </header>
         <div id="toolbar"></div>
         <div id="editor-host"></div>
       </main>
+    </div>
+
+    <div id="confirm-overlay" hidden>
+      <div id="confirm-dialog" role="alertdialog">
+        <div id="confirm-title"></div>
+        <div id="confirm-body"></div>
+        <div id="confirm-actions">
+          <button id="confirm-cancel" type="button">Cancel</button>
+          <button id="confirm-ok" type="button">Delete</button>
+        </div>
+      </div>
     </div>
   </body>
 </html>

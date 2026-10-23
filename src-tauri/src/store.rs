@@ -272,6 +272,23 @@ impl Store {
         Ok(created)
     }
 
+    /// Delete an entry file. Returns true when a file was removed, false when
+    /// no entry existed for that date. Refuses to delete anything outside the
+    /// notebook's entries directory (entry_path validates the notebook id).
+    pub fn delete_entry(
+        &self,
+        notebook: &str,
+        date: &chrono::NaiveDate,
+    ) -> std::io::Result<bool> {
+        self.require_notebook(notebook)?;
+        let path = self.entry_path(notebook, date)?;
+        match fs::remove_file(&path) {
+            Ok(()) => Ok(true),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
+            Err(e) => Err(e),
+        }
+    }
+
     /// List all dates that have an entry file, ascending.
     pub fn list_dates(&self, notebook: &str) -> std::io::Result<Vec<chrono::NaiveDate>> {
         self.require_notebook(notebook)?;
@@ -526,6 +543,19 @@ mod tests {
         assert_eq!(mime, "image/png");
         assert!(store.read_media("default", "../media/none.png").is_none());
         assert!(store.read_media("nope", rel).is_none());
+    }
+
+    #[test]
+    fn delete_entry_removes_and_is_idempotent() {
+        let (_tmp, store) = store();
+        let d = date(2024, 3, 8);
+        store.save_entry("default", &d, "doomed").unwrap();
+        assert!(store.delete_entry("default", &d).unwrap());
+        assert_eq!(store.read_entry("default", &d).unwrap(), None);
+        // second delete: nothing there, still Ok(false)
+        assert!(!store.delete_entry("default", &d).unwrap());
+        // unknown notebook rejected
+        assert!(store.delete_entry("nope", &d).is_err());
     }
 
     #[test]
