@@ -1604,6 +1604,21 @@ button {
   border-color: var(--accent-soft);
 }
 
+#nb-sub {
+  font-family: var(--sans);
+  font-size: 13.5px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+#nb-sub:focus {
+  outline: none;
+  border-color: var(--accent-soft);
+}
+
 #nb-covers {
   display: flex;
   flex-wrap: wrap;
@@ -1744,11 +1759,14 @@ button {
 #as-themes .as-choice::before {
   content: "";
   display: inline-block;
-  width: 10px;
-  height: 10px;
-  margin-right: 6px;
+  width: 14px;
+  height: 14px;
+  margin-right: 7px;
   border-radius: 50%;
-  background: var(--as-swatch, var(--accent));
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  box-sizing: border-box;
+  vertical-align: -2px;
+  background: linear-gradient(135deg, var(--as-swatch, var(--accent)));
 }
 
 #as-datadir {
