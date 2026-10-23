@@ -73,13 +73,22 @@ export async function copyImage(
   await writeImageToClipboard(reference);
 }
 
-/** Cut an image node: copy real bytes, then remove the node from the doc. */
+/**
+ * Cut an image node. The in-app copy and the removal run synchronously within
+ * the user gesture (so the cut feels instant and the ProseMirror clipboard
+ * always holds the node); the OS-clipboard write of the real bytes continues
+ * in the background.
+ */
 export async function cutImage(
   editor: Editor | null,
   reference: string,
 ): Promise<void> {
-  await copyImage(editor, reference);
+  if (editor) {
+    selectNodeBySrc(editor, reference, true);
+    triggerCopy();
+  }
   removeImage(editor, reference);
+  await writeImageToClipboard(reference);
 }
 
 /** Remove the first image node whose src matches the reference. */

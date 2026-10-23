@@ -85,6 +85,27 @@ export function placeNewBlock(view: EditorView, x: number, y: number): void {
   view.focus();
 }
 
+const SHEET_PAD = 320;
+
+/**
+ * Keep the sheet tall enough that placed blocks never fall off the bottom,
+ * while leaving empty pages at a natural height (no forced scrolling). The
+ * min-height CSS variable is raised only when content actually needs it.
+ */
+function growSheet(view: EditorView): void {
+  let maxY = 0;
+  view.state.doc.forEach((node) => {
+    const xy = parsePos(node.attrs.freeformPos);
+    if (xy) maxY = Math.max(maxY, xy.y);
+  });
+  const host = view.dom as HTMLElement;
+  if (maxY > 0) {
+    host.style.setProperty("--sheet-min-height", `${maxY + SHEET_PAD}px`);
+  } else {
+    host.style.removeProperty("--sheet-min-height");
+  }
+}
+
 /**
  * When a block is created right after a placed block (e.g. Enter), give it
  * coordinates so it stacks below instead of overlapping. Only newly added
@@ -160,13 +181,12 @@ export const FreeformSheet = Extension.create({
         view() {
           return {
             update(view, prevState) {
-              if (
-                !view.state.doc.eq(prevState.doc) &&
-                !editor.isDestroyed &&
-                view.state.doc.childCount > prevState.doc.childCount
-              ) {
+              if (view.state.doc.eq(prevState.doc)) return;
+              if (editor.isDestroyed) return;
+              if (view.state.doc.childCount > prevState.doc.childCount) {
                 stackNewBlocks(view, prevState.doc.childCount);
               }
+              growSheet(view);
             },
           };
         },
