@@ -10,6 +10,12 @@ export interface EntryMeta {
   date: string;
 }
 
+export interface NotebookMeta {
+  id: string;
+  name: string;
+  cover: string;
+}
+
 export interface MediaPayload {
   markdown: string;
   filename: string;
@@ -23,25 +29,61 @@ export function dataDir(): Promise<string> {
   return invoke<string>("data_dir");
 }
 
-export function getEntry(date: string): Promise<EntryPayload> {
-  return invoke<EntryPayload>("get_entry", { date });
+export function listNotebooks(): Promise<NotebookMeta[]> {
+  return invoke<NotebookMeta[]>("list_notebooks");
 }
 
-export function saveEntry(date: string, content: string): Promise<EntryPayload> {
-  return invoke<EntryPayload>("save_entry", { date, content });
+export function createNotebook(
+  name: string,
+  cover: string,
+): Promise<NotebookMeta> {
+  return invoke<NotebookMeta>("create_notebook", { name, cover });
 }
 
-export function listEntries(): Promise<EntryMeta[]> {
-  return invoke<EntryMeta[]>("list_entries");
+export function renameNotebook(
+  id: string,
+  name: string,
+): Promise<NotebookMeta> {
+  return invoke<NotebookMeta>("rename_notebook", { id, name });
+}
+
+export function setNotebookCover(
+  id: string,
+  cover: string,
+): Promise<NotebookMeta> {
+  return invoke<NotebookMeta>("set_notebook_cover", { id, cover });
+}
+
+export function getEntry(
+  notebook: string,
+  date: string,
+): Promise<EntryPayload> {
+  return invoke<EntryPayload>("get_entry", { notebook, date });
+}
+
+export function saveEntry(
+  notebook: string,
+  date: string,
+  content: string,
+): Promise<EntryPayload> {
+  return invoke<EntryPayload>("save_entry", { notebook, date, content });
+}
+
+export function listEntries(notebook: string): Promise<EntryMeta[]> {
+  return invoke<EntryMeta[]>("list_entries", { notebook });
 }
 
 export function saveMedia(
+  notebook: string,
   bytes: Uint8Array,
   ext: string | null,
 ): Promise<MediaPayload> {
-  return invoke<MediaPayload>("save_media", { bytes, ext });
+  return invoke<MediaPayload>("save_media", { notebook, bytes, ext });
 }
 
-export function mediaPath(reference: string): Promise<string> {
-  return invoke<string>("media_path", { reference });
+export function mediaPath(
+  notebook: string,
+  reference: string,
+): Promise<string> {
+  return invoke<string>("media_path", { notebook, reference });
 }

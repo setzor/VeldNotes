@@ -3,6 +3,10 @@ import type { JSONContent } from "@tiptap/core";
 import { StarterKit } from "@tiptap/starter-kit";
 import { Image } from "@tiptap/extension-image";
 import { Placeholder } from "@tiptap/extension-placeholder";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableCell } from "@tiptap/extension-table-cell";
+import { TableHeader } from "@tiptap/extension-table-header";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { mediaPath } from "./api";
 import { installImagePaste } from "./paste";
@@ -11,6 +15,12 @@ import {
   tiptapContentFromMarkdown,
   tiptapDocToMarkdown,
 } from "./markdown";
+
+let activeNotebook = "default";
+
+export function setActiveNotebook(notebook: string): void {
+  activeNotebook = notebook;
+}
 
 const LocalMediaImage = Image.extend({
   addAttributes() {
@@ -57,7 +67,7 @@ const LocalMediaImage = Image.extend({
       const src = node.attrs.src as string;
       if (src.startsWith("../media/")) {
         img.dataset.pendingSrc = src;
-        void mediaPath(src)
+        void mediaPath(activeNotebook, src)
           .then((abs) => {
             img.src = convertFileSrc(abs);
           })
@@ -102,6 +112,10 @@ export function createEditor(
         heading: { levels: [1, 2, 3] },
       }),
       LocalMediaImage.configure({ inline: false }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableCell,
+      TableHeader,
       Placeholder.configure({
         placeholder: "Open the page and write…",
       }),
