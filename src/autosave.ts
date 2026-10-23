@@ -71,4 +71,14 @@ export class Autosave {
       await this.chain;
     }
   }
+
+  /** Drop any pending unsaved content so a canceled edit is never written. */
+  cancel(): void {
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+    this.pending = null;
+    this.onStatus("idle");
+  }
 }

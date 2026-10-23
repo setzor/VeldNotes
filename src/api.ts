@@ -69,6 +69,10 @@ export function saveEntry(
   return invoke<EntryPayload>("save_entry", { notebook, date, content });
 }
 
+export function deleteEntry(notebook: string, date: string): Promise<boolean> {
+  return invoke<boolean>("delete_entry", { notebook, date });
+}
+
 export function listEntries(notebook: string): Promise<EntryMeta[]> {
   return invoke<EntryMeta[]>("list_entries", { notebook });
 }

@@ -705,6 +705,7 @@ button {
 }
 
 #page-header {
+  flex-shrink: 0;
   width: 100%;
   max-width: 720px;
   display: flex;
@@ -769,11 +770,13 @@ button {
   box-shadow: var(--shadow);
   padding: 32px 40px 48px;
   min-height: 60vh;
+  flex-shrink: 0;
 }
 
 /* --- formatting toolbar ---------------------------------------------------- */
 
 #toolbar {
+  flex-shrink: 0;
   width: 100%;
   max-width: 720px;
   display: flex;
@@ -1191,4 +1194,92 @@ button {
   #editor-host {
     padding: 22px 22px 36px;
   }
+}
+
+/* --- delete confirmation dialog -------------------------------------------- */
+
+#delete-btn {
+  font-family: var(--sans);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--ink-soft);
+}
+
+#delete-btn:hover {
+  color: #b0483a;
+  border-color: #b0483a;
+}
+
+#confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#confirm-overlay[hidden] {
+  display: none;
+}
+
+#confirm-dialog {
+  width: min(380px, calc(100vw - 48px));
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 22px 24px 18px;
+}
+
+#confirm-title {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+
+#confirm-body {
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  margin-bottom: 18px;
+}
+
+#confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+#confirm-actions button {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  padding: 6px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+#confirm-actions button:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 1px;
+}
+
+#confirm-ok {
+  background: #b0483a !important;
+  border-color: #b0483a !important;
+  color: #fff !important;
+}
+
+#confirm-ok:hover {
+  filter: brightness(1.1);
 }

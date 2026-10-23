@@ -15,6 +15,7 @@ interface ToolButton {
   title: string;
   run: (editor: Editor) => void;
   active?: (editor: Editor) => boolean;
+  inTableOnly?: boolean;
 }
 
 const BUTTONS: ToolButton[] = [
@@ -109,7 +110,7 @@ const BUTTONS: ToolButton[] = [
   },
   {
     id: "table",
-    label: "▦",
+    label: "\u25a6",
     title: "Insert table (2x2)",
     run: (e) =>
       e
@@ -117,6 +118,55 @@ const BUTTONS: ToolButton[] = [
         .focus()
         .insertTable({ rows: 2, cols: 2, withHeaderRow: true })
         .run(),
+  },
+  {
+    id: "row-above",
+    label: "\u21d1\u2261",
+    title: "Add row above",
+    inTableOnly: true,
+    run: (e) => e.chain().focus().addRowBefore().run(),
+  },
+  {
+    id: "row-below",
+    label: "\u21d3\u2261",
+    title: "Add row below",
+    inTableOnly: true,
+    run: (e) => e.chain().focus().addRowAfter().run(),
+  },
+  {
+    id: "col-left",
+    label: "\u2261\u21d0",
+    title: "Add column left",
+    inTableOnly: true,
+    run: (e) => e.chain().focus().addColumnBefore().run(),
+  },
+  {
+    id: "col-right",
+    label: "\u2261\u21d2",
+    title: "Add column right",
+    inTableOnly: true,
+    run: (e) => e.chain().focus().addColumnAfter().run(),
+  },
+  {
+    id: "del-row",
+    label: "\u2261\u00d7",
+    title: "Delete row",
+    inTableOnly: true,
+    run: (e) => e.chain().focus().deleteRow().run(),
+  },
+  {
+    id: "del-col",
+    label: "\u00d7\u2261",
+    title: "Delete column",
+    inTableOnly: true,
+    run: (e) => e.chain().focus().deleteColumn().run(),
+  },
+  {
+    id: "del-table",
+    label: "\u00d7\u25a6",
+    title: "Delete table",
+    inTableOnly: true,
+    run: (e) => e.chain().focus().deleteTable().run(),
   },
 ];
 
@@ -174,12 +224,19 @@ export function createToolbar(
 
   const update = (): void => {
     const editor = getEditor();
+    const inTable = editor ? editor.isActive("table") : false;
     for (const el of Array.from(
       container.querySelectorAll<HTMLButtonElement>(".tool-btn"),
     )) {
       const btn = BUTTONS.find((b) => b.id === el.dataset.tool);
-      if (!btn?.active || !editor) continue;
-      el.classList.toggle("active", btn.active(editor));
+      if (!btn) continue;
+      if (btn.inTableOnly) {
+        el.hidden = !inTable;
+        continue;
+      }
+      if (btn.active && editor) {
+        el.classList.toggle("active", btn.active(editor));
+      }
     }
   };
   document.addEventListener("selectionchange", update);

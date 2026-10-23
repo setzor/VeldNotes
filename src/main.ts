@@ -2,6 +2,7 @@ import "./styles.css";
 import { Editor } from "@tiptap/core";
 import {
   createNotebook,
+  deleteEntry,
   getEntry,
   listEntries,
   listNotebooks,
@@ -68,6 +69,12 @@ const editorHostEl = document.querySelector<HTMLDivElement>("#editor-host")!;
 const prevDayEl = document.querySelector<HTMLButtonElement>("#prev-day")!;
 const nextDayEl = document.querySelector<HTMLButtonElement>("#next-day")!;
 const todayBtnEl = document.querySelector<HTMLButtonElement>("#today-btn")!;
+const deleteBtnEl = document.querySelector<HTMLButtonElement>("#delete-btn")!;
+const confirmOverlayEl = document.querySelector<HTMLDivElement>("#confirm-overlay")!;
+const confirmTitleEl = document.querySelector<HTMLDivElement>("#confirm-title")!;
+const confirmBodyEl = document.querySelector<HTMLDivElement>("#confirm-body")!;
+const confirmOkEl = document.querySelector<HTMLButtonElement>("#confirm-ok")!;
+const confirmCancelEl = document.querySelector<HTMLButtonElement>("#confirm-cancel")!;
 const themeBtnEl = document.querySelector<HTMLButtonElement>("#theme-btn")!;
 const themePopEl = document.querySelector<HTMLDivElement>("#theme-popover")!;
 const themeChoicesEl = document.querySelector<HTMLDivElement>("#theme-choices")!;
@@ -331,6 +338,65 @@ document.addEventListener(
   },
   true,
 );
+
+/* --- delete day's note with confirmation ------------------------------------ */
+
+function askConfirm(title: string, body: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    confirmTitleEl.textContent = title;
+    confirmBodyEl.textContent = body;
+    confirmOverlayEl.hidden = false;
+    confirmCancelEl.focus();
+    const done = (answer: boolean): void => {
+      confirmOverlayEl.hidden = true;
+      confirmOkEl.removeEventListener("click", onOk);
+      confirmCancelEl.removeEventListener("click", onCancel);
+      confirmOverlayEl.removeEventListener("mousedown", onOverlay);
+      window.removeEventListener("keydown", onKey);
+      resolve(answer);
+    };
+    const onOk = (): void => done(true);
+    const onCancel = (): void => done(false);
+    const onOverlay = (event: MouseEvent): void => {
+      if (event.target === confirmOverlayEl) done(false);
+    };
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") done(false);
+      if (event.key === "Enter") done(true);
+    };
+    confirmOkEl.addEventListener("click", onOk);
+    confirmCancelEl.addEventListener("click", onCancel);
+    confirmOverlayEl.addEventListener("mousedown", onOverlay);
+    window.addEventListener("keydown", onKey);
+  });
+}
+
+deleteBtnEl.addEventListener("click", () => {
+  void (async () => {
+    if (!currentDate || !autosave) return;
+    const label = formatLong(currentDate);
+    const sure = await askConfirm(
+      "Delete this note?",
+      `This permanently deletes the entry for ${label} from this notebook. This cannot be undone.`,
+    );
+    if (!sure) return;
+    autosave.cancel();
+    try {
+      await deleteEntry(activeNotebookId, currentDate);
+    } catch (err) {
+      console.error("delete failed", err);
+      return;
+    }
+    editor?.destroy();
+    editor = null;
+    const deletedDate = currentDate;
+    currentDate = "";
+    setSaveStatus("idle");
+    await refreshEntries();
+    renderCover();
+    await openDate(deletedDate);
+  })();
+});
 
 /* --- navigation -------------------------------------------------------------- */
 
