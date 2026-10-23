@@ -12,8 +12,6 @@ export type Mode = "light" | "dark" | "auto";
 
 const THEME_KEY = "veldnotes.theme";
 const MODE_KEY = "veldnotes.mode";
-const TITLE_KEY = "veldnotes.cover.title";
-const SUB_KEY = "veldnotes.cover.subtitle";
 
 function isThemeId(v: string): v is ThemeId {
   return THEMES.some((t): boolean => t.id === v);
@@ -50,15 +48,4 @@ export function watchSystemMode(onChange: () => void): void {
     .addEventListener("change", onChange);
 }
 
-export function loadCoverTitle(): string {
-  return localStorage.getItem(TITLE_KEY) || "My Journal";
-}
 
-export function loadCoverSubtitle(): string {
-  return localStorage.getItem(SUB_KEY) || "a cozy daily journal";
-}
-
-export function saveCoverText(title: string, subtitle: string): void {
-  localStorage.setItem(TITLE_KEY, title);
-  localStorage.setItem(SUB_KEY, subtitle);
-}
