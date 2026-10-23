@@ -125,7 +125,7 @@ export function openAppSettings(): void {
     THEMES.map((t) => ({
       value: t.id as unknown,
       label: t.label,
-      swatch: t.swatch[0] as string,
+      swatch: `${t.swatch[0]} 50%, ${t.swatch[1]} 50%`,
     })),
     (v) => v === themeId,
     (v) => {
