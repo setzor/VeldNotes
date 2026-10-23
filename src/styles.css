@@ -1389,3 +1389,56 @@ button {
   border-color: var(--accent-soft);
   background: var(--accent-bg);
 }
+
+/* --- frosted custom context menu --------------------------------------------- */
+
+#context-menu {
+  position: fixed;
+  z-index: 200;
+  min-width: 172px;
+  padding: 5px;
+  background: color-mix(in srgb, var(--card) 72%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+#context-menu[hidden] {
+  display: none;
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  #context-menu {
+    background: var(--card);
+  }
+}
+
+.ctx-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 12.5px;
+  text-align: left;
+}
+
+.ctx-item:hover:not(.disabled),
+.ctx-item:focus-visible:not(.disabled) {
+  background: var(--accent-bg);
+  outline: none;
+}
+
+.ctx-item.disabled {
+  color: var(--ink-faint);
+  cursor: default;
+}
