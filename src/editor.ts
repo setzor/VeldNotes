@@ -7,8 +7,7 @@ import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
-import { convertFileSrc } from "@tauri-apps/api/core";
-import { mediaPath } from "./api";
+import { mediaDataUrl, readMedia } from "./api";
 import { installImagePaste } from "./paste";
 import {
   reviveSavedContent,
@@ -67,9 +66,9 @@ const LocalMediaImage = Image.extend({
       const src = node.attrs.src as string;
       if (src.startsWith("../media/")) {
         img.dataset.pendingSrc = src;
-        void mediaPath(activeNotebook, src)
-          .then((abs) => {
-            img.src = convertFileSrc(abs);
+        void readMedia(activeNotebook, src)
+          .then(({ data, mime }) => {
+            img.src = mediaDataUrl(data, mime);
           })
           .catch(() => {
             img.alt = "image unavailable";

@@ -1,5 +1,15 @@
 // @vitest-environment happy-dom
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: vi.fn(async (cmd: string, _args: Record<string, unknown>) => {
+    if (cmd === "read_media") {
+      return { data: Array.from(new Uint8Array([137, 80, 78, 71])), mime: "image/png" };
+    }
+    return {};
+  }),
+}));
+
 import { createEditor } from "./editor";
 import { reviveSavedContent, tiptapDocToMarkdown } from "./markdown";
 
@@ -41,5 +51,25 @@ describe("editor flow", () => {
     expect(editor.getText()).toContain("Hello");
     expect(editor.getText()).toContain("bold");
     expect(editor.getHTML()).toContain("<h1>");
+  });
+});
+
+describe("image rendering", () => {
+  it("resolves media to a data URL for display", async () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const editor = createEditor(
+      host,
+      "Before\n\n![pasted image](../media/abc123.png)\n\nAfter\n",
+      { onUpdate: () => {} },
+    );
+    await new Promise((r) => setTimeout(r, 30));
+    const imgs = Array.from(host.querySelectorAll("img"));
+    const real = imgs.find((i) => i.dataset.pendingSrc);
+    expect(real).toBeDefined();
+    await vi.waitFor(() => {
+      expect(real!.src.startsWith("data:image/png;base64,")).toBe(true);
+    });
+    editor.destroy();
   });
 });

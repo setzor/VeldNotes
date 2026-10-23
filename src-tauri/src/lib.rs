@@ -26,6 +26,7 @@ pub fn run() {
             commands::list_entries,
             commands::save_media,
             commands::media_path,
+            commands::read_media,
         ])
         .run(tauri::generate_context!())
         .expect("error while running VeldNotes");
