@@ -1,6 +1,7 @@
 import type { Editor } from "@tiptap/core";
 import { saveMedia } from "./api";
 import { setPasteNotebook } from "./paste";
+import { EDITOR_FONTS } from "./fonts";
 
 let activeNotebook = "default";
 
@@ -221,6 +222,25 @@ export function createToolbar(
     });
     container.appendChild(el);
   }
+
+  const fontSelect = document.createElement("select");
+  fontSelect.id = "font-select";
+  fontSelect.title = "Editor font";
+  for (const font of EDITOR_FONTS) {
+    const opt = document.createElement("option");
+    opt.value = font.id;
+    opt.textContent = font.label;
+    fontSelect.appendChild(opt);
+  }
+  fontSelect.addEventListener("mousedown", (event) => event.stopPropagation());
+  fontSelect.addEventListener("change", () => {
+    window.dispatchEvent(
+      new CustomEvent("veldnotes:set-font", {
+        detail: { fontId: fontSelect.value },
+      }),
+    );
+  });
+  container.appendChild(fontSelect);
 
   const update = (): void => {
     const editor = getEditor();

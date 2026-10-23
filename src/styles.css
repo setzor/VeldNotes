@@ -1062,6 +1062,13 @@ button {
 .entry-editor {
   outline: none;
   min-height: 50vh;
+  font-family: var(--editor-font, var(--serif));
+}
+
+.entry-editor h1,
+.entry-editor h2,
+.entry-editor h3 {
+  font-family: var(--sans);
 }
 
 .entry-editor p {
@@ -1778,4 +1785,29 @@ button {
   border-radius: 8px;
   word-break: break-all;
   user-select: text;
+}
+
+/* --- toolbar font dropdown --------------------------------------------------- */
+
+#font-select {
+  height: 28px;
+  margin-left: auto;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--paper);
+  color: var(--ink-soft);
+  font-family: var(--sans);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+#font-select:hover {
+  color: var(--ink);
+  border-color: var(--accent-soft);
+}
+
+#font-select:focus {
+  outline: none;
+  border-color: var(--accent-soft);
 }
