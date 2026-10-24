@@ -56,10 +56,12 @@ pub fn entry_filename_date(name: &str) -> Option<NaiveDate> {
     None
 }
 
+#[cfg_attr(not(test), allow(dead_code))]
 pub fn is_entry_filename(name: &str) -> bool {
     entry_filename_date(name).is_some()
 }
 
+#[cfg_attr(not(test), allow(dead_code))]
 pub fn is_legacy_entry_filename(name: &str) -> bool {
     name.ends_with(".md") && filename_date(name, ".md".len()).is_some()
 }
