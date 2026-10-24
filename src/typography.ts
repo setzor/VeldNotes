@@ -1,4 +1,7 @@
 import { Extension } from "@tiptap/core";
+import type { MarkType } from "@tiptap/pm/model";
+import type { Transaction } from "@tiptap/pm/state";
+import type { Mark as PMMark, Node as PMNode } from "@tiptap/pm/model";
 import { EDITOR_FONTS, fontStack } from "./fonts";
 
 /**
@@ -11,12 +14,40 @@ import { EDITOR_FONTS, fontStack } from "./fonts";
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
     typography: {
+      removeEmptyTextStyleTextOnly: () => ReturnType;
       setFontFamily: (fontId: string) => ReturnType;
       unsetFontFamily: () => ReturnType;
       setFontSizePx: (px: number) => ReturnType;
       unsetFontSizePx: () => ReturnType;
     };
   }
+}
+
+/**
+ * Remove `textStyle` marks that no longer carry any attribute. Scoped to text
+ * nodes only: tiptap's `removeEmptyTextStyle` also strips marks across
+ * non-textblock ancestors such as list containers, which would undo a font
+ * change applied to list items.
+ */
+function removeEmptyTextStyle(tr: Transaction, textStyle: MarkType | undefined): void {
+  const { selection } = tr;
+  if (!textStyle) return;
+  tr.doc.nodesBetween(
+    selection.from,
+    selection.to,
+    (node: PMNode, pos: number) => {
+      if (
+        node.isText &&
+        node.marks.some(
+          (mark: PMMark) =>
+            mark.type === textStyle &&
+            Object.values(mark.attrs).every((value) => !value),
+        )
+      ) {
+        tr.removeMark(pos, pos + node.nodeSize, textStyle);
+      }
+    },
+  );
 }
 
 export const Typography = Extension.create({
@@ -65,6 +96,12 @@ export const Typography = Extension.create({
 
   addCommands() {
     return {
+      removeEmptyTextStyleTextOnly:
+        () =>
+        ({ tr, state }) => {
+          removeEmptyTextStyle(tr, state.schema.marks.textStyle);
+          return true;
+        },
       setFontFamily:
         (fontId: string) =>
         ({ chain }) => {
@@ -74,32 +111,34 @@ export const Typography = Extension.create({
           if (!stack) return false;
           return chain()
             .setMark("textStyle", { fontFamily: stack })
-            .removeEmptyTextStyle()
+            .removeEmptyTextStyleTextOnly()
             .run();
         },
       unsetFontFamily:
         () =>
-        ({ chain }) =>
-          chain()
+        ({ chain }) => {
+          return chain()
             .setMark("textStyle", { fontFamily: null })
-            .removeEmptyTextStyle()
-            .run(),
+            .removeEmptyTextStyleTextOnly()
+            .run();
+        },
       setFontSizePx:
         (px: number) =>
         ({ chain }) => {
           if (!Number.isFinite(px) || px <= 0) return false;
           return chain()
             .setMark("textStyle", { fontSizePx: px })
-            .removeEmptyTextStyle()
+            .removeEmptyTextStyleTextOnly()
             .run();
         },
       unsetFontSizePx:
         () =>
-        ({ chain }) =>
-          chain()
+        ({ chain }) => {
+          return chain()
             .setMark("textStyle", { fontSizePx: null })
-            .removeEmptyTextStyle()
-            .run(),
+            .removeEmptyTextStyleTextOnly()
+            .run();
+        },
     };
   },
 });
