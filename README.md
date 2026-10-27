@@ -1,36 +1,49 @@
-# VeldNotes
+<div align="center">
 
-A cozy, local-first daily journaling app for Windows and Linux desktop/laptop.
+<img src="src-tauri/icons/icon.png" alt="VeldNotes icon — an autumn leaf" width="160" />
 
-Open it and it's today's page. Type. Close it. That's the whole loop.
+# 🍁 VeldNotes
 
-## Download
+**A cozy, local-first daily journal for your desktop.**
 
-Grab the latest release from the [Releases](https://github.com/setzor/VeldNotes/releases) page.
+*Open it and it's today's page. Type. Close it. That's the whole loop.* 🍂
+
+Windows & Linux · no accounts · no streaks · no guilt
+
+</div>
+
+---
+
+## ✨ Why VeldNotes?
+
+Inspired by the calm minimalism of a pocket notebook: warm kraft-paper
+tones, grass-gold accents, a readable serif, generous whitespace.
+Your journal is a plain folder of rich-text files that **you own** —
+plain JSON, greppable, and easy to back up. No cloud, no lock-in, no
+"day 0 of your streak" guilt trips.
+
+## 📥 Download
+
+Grab the latest release from the **[Releases](https://github.com/setzor/VeldNotes/releases)** page.
 
 | Platform | Format | Install |
 |---|---|---|
-| Linux (any distro) | `.AppImage` | `chmod +x VeldNotes_*.AppImage && ./VeldNotes_*.AppImage` |
-| Debian / Ubuntu / Mint | `.deb` | `sudo dpkg -i VeldNotes_*.deb` (or double-click) |
-| Fedora / RHEL / openSUSE | `.rpm` | `sudo rpm -i VeldNotes-*.rpm` (or `sudo dnf install VeldNotes-*.rpm`) |
-| Windows | `.msi` | Double-click the `.msi` installer |
+| 🐧 Linux (any distro) | `.AppImage` | `chmod +x VeldNotes_*.AppImage && ./VeldNotes_*.AppImage` |
+| 🐧 Debian / Ubuntu / Mint | `.deb` | `sudo dpkg -i VeldNotes_*.deb` (or double-click) |
+| 🐧 Fedora / RHEL / openSUSE | `.rpm` | `sudo rpm -i VeldNotes-*.rpm` (or `sudo dnf install VeldNotes-*.rpm`) |
+| 🪟 Windows | `.msi` | Double-click the `.msi` installer |
 
-VeldNotes is inspired by the calm minimalism of a pocket notebook: warm
-kraft-paper tones, grass-gold accents, a readable serif, generous whitespace.
-No streaks, no badges, no guilt. Your journal is a plain folder of rich-text
-files that you own — plain JSON, greppable, and easy to back up.
-
-## Tech stack
+## 🧺 Tech stack
 
 - **[Tauri 2](https://tauri.app)** app shell (WebView2 on Windows, WebKitGTK on Linux)
-- **Rust** core — all app logic (storage, entries, media, autosave coordination)
+- **Rust** core 🦀 — all app logic (storage, entries, media, autosave coordination)
   lives in Tauri commands under `src-tauri/src/`. The frontend is a thin UI layer.
 - **TypeScript** frontend (`src/`) with a **[TipTap](https://tiptap.dev)** editor
   (chosen over Milkdown for its smaller dependency surface, excellent ProseMirror
   integration, and straightforward extension API for our custom image node)
 - Plain CSS for the cozy theme (light + dark, follows system preference)
 
-## Data format (your files, your data)
+## 📂 Data format (your files, your data)
 
 Everything lives in a single plain folder:
 
@@ -59,7 +72,7 @@ Everything lives in a single plain folder:
   `%APPDATA%\com.veldnotes.app\` (resolved via Tauri's path APIs — no hardcoded
   paths). You can point `grep` or any JSON tooling at this folder.
 
-## Development
+## 🛠️ Development
 
 Prerequisites: [Rust](https://rustup.rs), [Node.js](https://nodejs.org) +
 [pnpm](https://pnpm.io), and the Tauri system dependencies
@@ -83,7 +96,7 @@ pnpm tauri build      # bundle installers (.deb/.rpm/.AppImage, .msi/.exe)
 cd src-tauri && cargo test   # Rust core unit tests
 ```
 
-## Project structure
+## 🗂️ Project structure
 
 ```
 src-tauri/            Rust core (Tauri commands, storage, media)
@@ -107,7 +120,7 @@ src/                  TypeScript frontend (thin UI layer)
   styles.css          cozy theme (light + dark)
 ```
 
-## Design notes for future mobile
+## 📱 Design notes for future mobile
 
 All storage and logic live in the Rust core (Tauri commands); the frontend only
 calls commands. UI components avoid desktop-only assumptions where cheap. No
@@ -115,11 +128,18 @@ desktop-only dependencies are in the core. Tauri 2 supports iOS/Android later
 with the same Rust core and web UI (reference architecture:
 [Meron](https://github.com/nonbili/meron)).
 
-## Out of scope (v0.1)
+## 🚧 Out of scope (v0.1)
 
-Sync, accounts, encryption, PDF export, search, streaks,
-plugins.
+Sync, accounts, encryption, PDF export, search, streaks, plugins.
 
-## License
+## 📜 License
 
 See [LICENSE](LICENSE).
+
+---
+
+<div align="center">
+
+🍂 *Happy journaling.* 🍂
+
+</div>
