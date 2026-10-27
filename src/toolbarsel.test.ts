@@ -43,4 +43,31 @@ describe("toolbar typography dropdowns", () => {
 
     editor.destroy();
   });
+
+  it("refresh hides table-only buttons after the editor swaps to a table-less document", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const editorA = createEditor(host, "", { onUpdate: () => {} });
+    editorA.chain().focus().insertTable({ rows: 2, cols: 2, withHeaderRow: true }).run();
+    let current = editorA;
+    const bar = document.createElement("div");
+    document.body.appendChild(bar);
+    const refresh = createToolbar(bar, () => current);
+    editorA.chain().focus().setTextSelection(3).run();
+    refresh();
+    expect(
+      bar.querySelector<HTMLButtonElement>('[data-tool="del-table"]')!.hidden,
+    ).toBe(false);
+
+    current.destroy();
+    const editorB = createEditor(host, "plain text", { onUpdate: () => {} });
+    current = editorB;
+    refresh();
+    for (const id of ["row-above", "row-below", "col-left", "col-right", "del-row", "del-col", "del-table"]) {
+      expect(
+        bar.querySelector<HTMLButtonElement>(`[data-tool="${id}"]`)!.hidden,
+      ).toBe(true);
+    }
+    editorB.destroy();
+  });
 });

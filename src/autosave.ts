@@ -59,7 +59,12 @@ export class Autosave {
     });
   }
 
-  async flushNow(): Promise<void> {
+  /**
+   * Save any pending content immediately. Returns true when everything is
+   * saved; false when a save failed and unsaved content is still pending,
+   * so callers can refuse to discard the dirty editor.
+   */
+  async flushNow(): Promise<boolean> {
     if (this.timer) {
       clearTimeout(this.timer);
       this.timer = null;
@@ -70,6 +75,7 @@ export class Autosave {
       this.flush();
       await this.chain;
     }
+    return !this.dirty;
   }
 
   /** Drop any pending unsaved content so a canceled edit is never written. */
