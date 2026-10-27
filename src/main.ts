@@ -42,6 +42,7 @@ import {
   saveLastNotebook,
 } from "./shelf";
 import { createToolbar, setToolbarNotebook } from "./toolbar";
+import { attachCoverTitleEditing } from "./covertitle";
 import { installAppSettings, openAppSettings, getAppSettings } from "./appsettings";
 import type { AppSettings } from "./settings";
 import { applyDefaultFontStack, fontStack } from "./fonts";
@@ -274,24 +275,32 @@ for (const el of [coverBrandEl, coverSubEl]) {
   });
 }
 
-coverBrandEl.addEventListener("blur", () => {
-  const nb = activeNotebook();
-  const newName = (coverBrandEl.textContent ?? "").trim();
-  if (!nb) return;
-  if (newName && newName !== nb.name) {
-    void renameNotebook(nb.id, newName).then((meta) => {
-      nb.name = meta.name;
-      renderCover();
-      renderShelfPopover();
-    });
-  } else {
-    coverBrandEl.textContent = nb.name;
-  }
+attachCoverTitleEditing(coverBrandEl, {
+  getNotebook: (id) => notebooks.find((n) => n.id === id),
+  getActiveNotebookId: () => activeNotebookId,
+  renameNotebook: (id, name) => renameNotebook(id, name),
+  onRenamed: (id, meta) => {
+    const nb = notebooks.find((n) => n.id === id);
+    if (nb) nb.name = meta.name;
+    renderCover();
+    renderShelfPopover();
+  },
+  onReverted: () => {},
+});
+
+let subtitleEditNotebookId: string | null = null;
+
+coverSubEl.addEventListener("focus", () => {
+  subtitleEditNotebookId = activeNotebookId;
 });
 
 coverSubEl.addEventListener("blur", () => {
+  const editId = subtitleEditNotebookId;
+  subtitleEditNotebookId = null;
   const value = (coverSubEl.textContent ?? "").trim();
-  if (activeNotebookId) saveSubtitleFor(activeNotebookId, value);
+  if (editId && editId === activeNotebookId) {
+    saveSubtitleFor(editId, value);
+  }
 });
 
 document.addEventListener("click", (event) => {

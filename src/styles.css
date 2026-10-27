@@ -1175,7 +1175,9 @@ button {
 }
 
 .entry-image {
-  margin: 1em 0;
+  position: relative;
+  display: table;
+  margin: 1em auto;
 }
 
 .entry-image[data-text-align="center"] {
@@ -1196,11 +1198,6 @@ button {
   border-radius: 12px;
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
-}
-
-.entry-image {
-  position: relative;
-  display: inline-block;
 }
 
 .entry-image .img-resize-handle {
