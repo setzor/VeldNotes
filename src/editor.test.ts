@@ -108,3 +108,34 @@ describe("image rendering", () => {
     editor.destroy();
   });
 });
+
+describe("image resize commit", () => {
+  it("merges the resize width with the node's current attrs", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const editor = createEditor(host, "", { onUpdate: () => {} });
+    editor.commands.setImage({ src: "pic.png", alt: "pic" });
+    const before = editor.getJSON();
+    const imgNode = before.content?.[0];
+    expect(imgNode?.type).toBe("image");
+
+    const el = host.querySelector<HTMLElement>(".entry-image .img-resize-handle.corner");
+    expect(el).not.toBeNull();
+    const img = host.querySelector<HTMLImageElement>(".entry-image img")!;
+    Object.defineProperty(img, "getBoundingClientRect", {
+      value: () => ({ width: 250, height: 100 } as DOMRect),
+    });
+
+    el!.dispatchEvent(new MouseEvent("mousedown", { clientX: 100, bubbles: true }));
+    document.dispatchEvent(new MouseEvent("mousemove", { clientX: 160 }));
+    document.dispatchEvent(new MouseEvent("mouseup"));
+
+    const after = editor.getJSON();
+    const saved = after.content?.[0];
+    expect(saved?.type).toBe("image");
+    expect(saved?.attrs?.width).toBe(250);
+    expect(saved?.attrs?.alt).toBe("pic");
+    expect(saved?.attrs?.src).toBe("pic.png");
+    editor.destroy();
+  });
+});

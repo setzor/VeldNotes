@@ -122,9 +122,11 @@ const LocalMediaImage = Image.extend({
       const commit = (px: number): void => {
         const pos = typeof getPos === "function" ? getPos() : null;
         if (pos === null) return;
+        const currentNode =
+          ed.view.state.doc.nodeAt(pos) ?? node;
         ed.view.dispatch(
           ed.view.state.tr.setNodeMarkup(pos, undefined, {
-            ...node.attrs,
+            ...currentNode.attrs,
             width: px,
           }),
         );
