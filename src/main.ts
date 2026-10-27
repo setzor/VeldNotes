@@ -530,14 +530,23 @@ nextDayEl.addEventListener("click", () =>
 );
 todayBtnEl.addEventListener("click", () => void openDate(todayStr));
 
+const OVERLAY_IDS = [
+  "app-settings-overlay",
+  "nb-settings-overlay",
+  "prompt-overlay",
+  "context-menu",
+];
+
 window.addEventListener("keydown", (event) => {
   if (
     shouldSkipShortcut(event, {
       isPopoverOpen: () => !shelfPopEl.hidden,
       isDialogOpen: () => {
         if (!confirmOverlayEl.hidden) return true;
-        const settingsOverlay = document.getElementById("app-settings-overlay");
-        return settingsOverlay !== null && !settingsOverlay.hidden;
+        return OVERLAY_IDS.some((id) => {
+          const el = document.getElementById(id);
+          return el !== null && !el.hidden;
+        });
       },
     })
   ) {

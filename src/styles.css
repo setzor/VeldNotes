@@ -1187,9 +1187,11 @@ button {
 
 .entry-image[data-text-align="right"] {
   margin-left: auto;
+  margin-right: 0;
 }
 
 .entry-image[data-text-align="left"] {
+  margin-left: 0;
   margin-right: auto;
 }
 
