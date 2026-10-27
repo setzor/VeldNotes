@@ -276,7 +276,7 @@ async function insertFile(editor: Editor, file: File): Promise<void> {
 export function createToolbar(
   container: HTMLElement,
   getEditor: () => Editor | null,
-): void {
+): () => void {
   container.textContent = "";
   for (const btn of BUTTONS) {
     if (btn.separator) {
@@ -396,6 +396,7 @@ export function createToolbar(
   };
   document.addEventListener("selectionchange", update);
   update();
+  return update;
 }
 
 const toolbarWatchers = new WeakMap<Editor, boolean>();

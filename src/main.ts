@@ -57,6 +57,7 @@ let activeNotebookId = "default";
 let notebooks: NotebookMeta[] = [];
 let editor: Editor | null = null;
 let autosave: Autosave | null = null;
+let refreshToolbar: (() => void) | null = null;
 let datesWithEntries = new Set<string>();
 let firstWeekday = localeFirstWeekday();
 
@@ -184,7 +185,7 @@ function setViewedMonth(month: string): void {
 
 async function openDate(date: string): Promise<void> {
   if (!isValidDateString(date) || date === currentDate) return;
-  await autosave?.flushNow();
+  if ((await autosave?.flushNow()) === false) return;
   const payload = await getEntry(activeNotebookId, date);
   currentDate = payload.date;
   entryDateEl.textContent = formatLong(payload.date);
@@ -209,6 +210,7 @@ async function openDate(date: string): Promise<void> {
     renderCalendar();
   }
   refreshDeleteButton();
+  refreshToolbar?.();
   editor?.commands.focus("end");
 }
 
@@ -235,7 +237,7 @@ function renderShelfPopover(): void {
 
 async function switchNotebook(id: string): Promise<void> {
   if (id === activeNotebookId) return;
-  await autosave?.flushNow();
+  if ((await autosave?.flushNow()) === false) return;
   activeNotebookId = id;
   saveLastNotebook(id);
   setToolbarNotebook(id);
@@ -551,7 +553,7 @@ async function boot(): Promise<void> {
 
 window.addEventListener("DOMContentLoaded", () => {
   applyTheme(currentThemeId, currentMode);
-  createToolbar(toolbarEl, () => editor);
+  refreshToolbar = createToolbar(toolbarEl, () => editor);
   void boot();
 });
 

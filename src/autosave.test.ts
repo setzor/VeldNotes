@@ -85,4 +85,24 @@ describe("Autosave", () => {
     expect(save).toHaveBeenCalledTimes(2);
     expect(statuses[statuses.length - 1]).toBe("saved");
   });
+
+  it("flushNow returns false while the save keeps failing so callers can block navigation", async () => {
+    const save = vi.fn(async () => {
+      throw new Error("disk full");
+    });
+    const autosave = new Autosave(save, () => {}, 10);
+    autosave.update("precious");
+    const ok = await autosave.flushNow();
+    expect(ok).toBe(false);
+    expect(autosave.dirty).toBe(true);
+    autosave.update("precious");
+    expect(await autosave.flushNow()).toBe(false);
+  });
+
+  it("flushNow returns true once everything is saved", async () => {
+    const { autosave } = makeHarness(10_000);
+    autosave.update("fine");
+    expect(await autosave.flushNow()).toBe(true);
+    expect(autosave.dirty).toBe(false);
+  });
 });
