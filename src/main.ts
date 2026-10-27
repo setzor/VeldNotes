@@ -584,9 +584,11 @@ async function revealWindow(): Promise<void> {
 window.addEventListener("DOMContentLoaded", () => {
   applyTheme(currentThemeId, currentMode);
   refreshToolbar = createToolbar(toolbarEl, () => editor);
-  void boot().then(() => {
-    requestAnimationFrame(() => void revealWindow().catch(() => {}));
-  });
+  void boot()
+    .catch((err) => console.error("boot failed", err))
+    .then(() => {
+      requestAnimationFrame(() => void revealWindow().catch(() => {}));
+    });
 });
 
 window.addEventListener("beforeunload", () => {

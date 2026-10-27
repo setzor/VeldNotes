@@ -334,10 +334,12 @@
 input,
 textarea,
 [contenteditable="true"],
-.entry-editor,
+[contenteditable="true"] *,
+.entry-editor *,
 #as-datadir {
   user-select: text;
   -webkit-user-select: text;
+  -webkit-user-drag: auto;
 }
 
 img {
