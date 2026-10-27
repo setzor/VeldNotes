@@ -572,10 +572,21 @@ async function boot(): Promise<void> {
   await openDate(todayStr);
 }
 
+/** Reveal the window only after the UI is themed and laid out, so the
+ * user never sees a white flash before the theme applies. */
+async function revealWindow(): Promise<void> {
+  const { getCurrentWindow } = await import("@tauri-apps/api/window");
+  const win = getCurrentWindow();
+  await win.show();
+  await win.setFocus();
+}
+
 window.addEventListener("DOMContentLoaded", () => {
   applyTheme(currentThemeId, currentMode);
   refreshToolbar = createToolbar(toolbarEl, () => editor);
-  void boot();
+  void boot().then(() => {
+    requestAnimationFrame(() => void revealWindow().catch(() => {}));
+  });
 });
 
 window.addEventListener("beforeunload", () => {
