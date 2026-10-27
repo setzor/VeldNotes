@@ -43,6 +43,8 @@ import {
 } from "./shelf";
 import { createToolbar, setToolbarNotebook } from "./toolbar";
 import { attachCoverTitleEditing } from "./covertitle";
+import { shouldSkipShortcut } from "./shortcuts";
+import { applyNotebookMeta } from "./notebookmeta";
 import { installAppSettings, openAppSettings, getAppSettings } from "./appsettings";
 import type { AppSettings } from "./settings";
 import { applyDefaultFontStack, fontStack } from "./fonts";
@@ -226,12 +228,7 @@ function renderShelfPopover(): void {
       shelfPopEl.hidden = true;
     },
     onMetaChange: (meta) => {
-      const nb = notebooks.find((n) => n.id === meta.id);
-      if (nb) {
-        nb.name = meta.name;
-        nb.cover = meta.cover;
-      }
-      renderCover();
+      if (applyNotebookMeta(notebooks, meta)) renderCover();
     },
   });
 }
@@ -534,11 +531,17 @@ nextDayEl.addEventListener("click", () =>
 todayBtnEl.addEventListener("click", () => void openDate(todayStr));
 
 window.addEventListener("keydown", (event) => {
-  if (event.target instanceof HTMLElement) {
-    const tag = event.target.tagName;
-    if (tag === "INPUT" || tag === "TEXTAREA" || event.target.isContentEditable) {
-      return;
-    }
+  if (
+    shouldSkipShortcut(event, {
+      isPopoverOpen: () => !shelfPopEl.hidden,
+      isDialogOpen: () => {
+        if (!confirmOverlayEl.hidden) return true;
+        const settingsOverlay = document.getElementById("app-settings-overlay");
+        return settingsOverlay !== null && !settingsOverlay.hidden;
+      },
+    })
+  ) {
+    return;
   }
   if (event.key === "ArrowLeft") void openDate(shiftDate(currentDate, -1));
   else if (event.key === "ArrowRight") void openDate(shiftDate(currentDate, 1));
